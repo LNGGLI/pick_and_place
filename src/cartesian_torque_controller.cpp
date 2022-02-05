@@ -109,7 +109,7 @@ namespace controllers
             }
         }
 
-        //std::fill(dq_filtered_.begin(), dq_filtered_.end(), 0);
+        
 
         return true;
     }
@@ -162,7 +162,7 @@ namespace controllers
     */
     }
 
-} // namespace franka_example_controllers
+} // namespace controllers
 
 PLUGINLIB_EXPORT_CLASS(controllers::CartesianTorqueController,
                        controller_interface::ControllerBase)

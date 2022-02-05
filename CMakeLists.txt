@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED
 
+dynamic_reconfigure
 franka_control
 franka_hw
 franka_gripper
@@ -111,6 +112,7 @@ rospy
 #   cfg/DynReconf2.cfg
 # )
 
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -145,7 +147,11 @@ include_directories(
 # )
 
 ## Declare a C++ library
-add_library(controllers src/cartesian_torque_controller.cpp)
+add_library(controllers 
+src/cartesian_torque_controller.cpp
+src/cartesian_impedance_controller.cpp
+src/cartesian_pose_controller.cpp
+)
 
 target_link_libraries(controllers 
  ${catkin_LIBRARIES} 
@@ -162,6 +168,8 @@ target_include_directories(controllers SYSTEM PUBLIC
 target_include_directories(controllers PUBLIC
   include
 )
+
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure

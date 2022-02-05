@@ -14,9 +14,9 @@
 
 #include <franka_hw/franka_cartesian_command_interface.h>
 
-namespace franka_example_controllers {
+namespace controllers {
 
-class CartesianPoseExampleController
+class CartesianPoseController
     : public controller_interface::MultiInterfaceController<franka_hw::FrankaPoseCartesianInterface,
                                                             franka_hw::FrankaStateInterface> {
  public:
@@ -31,4 +31,4 @@ class CartesianPoseExampleController
   std::array<double, 16> initial_pose_{};
 };
 
-}  // namespace franka_example_controllers
+}  // namespace controllers

@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <controller_interface/multi_interface_controller.h>
-#include <dynamic_reconfigure/server.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/robot_hw.h>
@@ -56,12 +55,7 @@ class CartesianImpedanceController : public controller_interface::MultiInterface
   Eigen::Vector3d position_d_target_;
   Eigen::Quaterniond orientation_d_target_;
 
-  // Dynamic reconfigure
-  std::unique_ptr<dynamic_reconfigure::Server<controllers::compliance_paramConfig>>
-      dynamic_server_compliance_param_;
-  ros::NodeHandle dynamic_reconfigure_compliance_param_node_;
-  void complianceParamCallback(controllers::compliance_paramConfig& config,
-                               uint32_t level);
+ 
 
   // Equilibrium pose subscriber
   ros::Subscriber sub_equilibrium_pose_;

@@ -1,0 +1,36 @@
+<library path="lib/libcontrollers">
+
+  <class name="pick_and_place/CartesianTorqueController" type="pick_and_place::CartesianTorqueController" base_class_type="controller_interface::ControllerBase">
+    <description>
+      Controller che segue una traiettoria in cartesiano calcolando le coppie da applicare 
+      ai motori. Utilizza la cinematica inversa interna.
+      
+    </description>
+    </class>
+
+    <class name="pick_and_place/CartesianPoseController" type="pick_and_place::CartesianPoseController" base_class_type="controller_interface::ControllerBase">
+    <description>
+        Controller che segue una traiettoria in cartesiano.
+    </description>
+    </class>
+
+    <class name="pick_and_place/CartesianImpedanceController" type="pick_and_place::CartesianImpedanceController" base_class_type="controller_interface::ControllerBase">
+    <description>
+        Controller che segue una traiettoria in cartesiano.
+    </description>
+    </class>
+  
+</library>
+
+
+
+<!-- 
+<library path="lib/lib<name_of_your_controller_library>">
+  <class name="name_of_your_controller_package/NameOfYourControllerClass"
+         type="name_of_your_controller_package::NameOfYourControllerClass"
+         base_class_type="controller_interface::ControllerBase">
+    <description>
+      Some text to describe what your controller is doing
+    </description>
+  </class>
+</library> -->

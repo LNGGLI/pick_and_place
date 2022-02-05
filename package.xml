@@ -65,6 +65,7 @@
   <depend>realtime_tools</depend>
   <depend>roscpp</depend>
   <depend>rospy</depend>
+  <depend>dynamic_reconfigure</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
 
