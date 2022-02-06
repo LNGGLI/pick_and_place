@@ -10,14 +10,16 @@
 // Utils
 #include <ros/ros.h>
 #include <franka_gripper/franka_gripper.h>
-#include <sun_traj_lib/Cartesian_Independent_Traj.h>
+
 #include <pick_and_place/trajectory_node.h>
+
+#include <sun_traj_lib/Cartesian_Independent_Traj.h>
 #include <sun_traj_lib/Quintic_Poly_Traj.h>
-#include <tf/transform_listener.h>
+#include <sun_traj_lib/Line_Segment_Traj.h>
 
 
 // Messages
-#include <trajectory_msgs/MultiDOFJointTrajectory.h>
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 #include <franka_msgs/FrankaState.h>
 
 
@@ -30,7 +32,7 @@ int main(int argc, char** argv) {
 
     ros::init(argc, argv, "trajectory_node");
     ros::NodeHandle nh;
-    ros::Publisher command_pb = nh.advertise<trajectory_msgs::MultiDOFJointTrajectory>("cartesian_trajectory_command", 1);
+    ros::Publisher command_pb = nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("cartesian_trajectory_command", 1);
     ros::Subscriber pose_sub = nh.subscribe<franka_msgs::FrankaState>("/franka_state_controller/franka_states",1,stateCB);
 
     while(!initial_read){
@@ -41,18 +43,20 @@ int main(int argc, char** argv) {
     
     std::cout << "Configurazione iniziale (initial_transform) acquisita. \n";
     
+    TooN::Vector< 3 > pi({initial_transform.getOrigin().x(),
+                          initial_transform.getOrigin().y(),
+                          initial_transform.getOrigin().z()}); // initial_position
+
+
     std::cout << "Generazione della traiettoria in cartesiano \n";
 
     // Generazione della traiettoria su primitiva di percorso di tipo segmento:
+    
 
-    tf::Vector3 pi = initial_transform.getOrigin();
-    // TooN::Vector< 3 > pi = {initial_position.getX(),initial_position.getY(),initial_position.getZ()}; // initial_position
-    // TooN::Vector< 3 > pf = {1,2,3};
+    TooN::Vector< 3 > pf ({1,2,3});
 
-
-    //sun::Quintic_Poly_Traj polinomio_quintico(Tf, 0 , 1);
-
-    // Line_Segment_Traj line_traj(); (pi,pf,polinomio_quintico)
+    sun::Quintic_Poly_Traj qp(Tf, 0 , 1);
+    sun::Line_Segment_Traj line_traj(pi,pf,qp);
 
 
 
@@ -79,7 +83,7 @@ int main(int argc, char** argv) {
         
         t = ros::Time::now().toSec() - begin; // tempo trascorso
         
-        trajectory_msgs::MultiDOFJointTrajectory msg;
+        trajectory_msgs::MultiDOFJointTrajectoryPoint msg;
         command_pb.publish(msg);
 
         loop_rate.sleep();

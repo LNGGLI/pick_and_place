@@ -13,7 +13,7 @@
 #include <ros/node_handle.h>
 #include <ros/time.h>
 
-#include <trajectory_msgs/MultiDOFJointTrajectory.h>
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 
 
 #include <Eigen/Dense>

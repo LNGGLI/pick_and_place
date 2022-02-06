@@ -23,7 +23,7 @@ namespace trajectory{
 
    
     tf::Transform initial_transform;
-    // q_goal: [6.946831287570189e-05, -0.7849671420412789, 0.00016540849472852385, -2.356101957380501, -0.00021844535540237149, 1.5710111441744694, 0.7849975134233633]
+
 
     bool initial_read = false;
     double Tf = 10;
