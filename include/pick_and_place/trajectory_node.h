@@ -24,7 +24,6 @@ namespace trajectory{
    
     tf::Transform initial_transform;
 
-
     bool initial_read = false;
     double Tf = 10;
 
@@ -58,14 +57,13 @@ namespace trajectory{
     
     tf::Transform convertArrayToTf(const std::array<double, 16>& transform) {
 
-            
         tf::Matrix3x3 rotation(transform[0], transform[4], transform[8], transform[1], transform[5],
                             transform[9], transform[2], transform[6], transform[10]);
         
         tf::Vector3 translation(transform[12], transform[13], transform[14]);
+
         return tf::Transform(rotation, translation);
         
-
     }
 
 
@@ -73,8 +71,11 @@ namespace trajectory{
 
         std::array<double,16> transform;
         for(int i = 0; i < 16 ; i++)
-            transform[i]= msg->O_T_EE[i];
+            transform[i]= msg->O_T_EE[i]; // ATTENZIONE, CONTROLLARE SE VIENE COSTRUITA CORRETTAMENTE
+                                         // la O_T_EE è passata per colonne!
+                
         initial_transform = convertArrayToTf(transform); 
+
         initial_read = true;
     }
 

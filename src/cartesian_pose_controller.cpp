@@ -13,6 +13,9 @@
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 
+#include <Eigen/Geometry> 
+
+
 namespace controllers
 {
 
@@ -54,48 +57,63 @@ namespace controllers
       return false;
     }
 
+    sub_cartesian_trajectory_ = node_handle.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("cartesian_trajectory_command", 1, &CartesianPoseController::CartesianTrajectoryCB, this);
+
+
     return true;
   }
 
-  void CartesianPoseController::starting(const ros::Time & /* time */)
-  {
-    initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_d;
+
+  void CartesianPoseController::starting(const ros::Time& /* time */) {
+    pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_d;
     elapsed_time_ = ros::Duration(0.0);
   }
 
-  void CartesianPoseController::update(const ros::Time & /* time */,
-                                       const ros::Duration &period)
+
+
+  void CartesianPoseController::update(const ros::Time & /* time */, const ros::Duration &period)
   {
-    elapsed_time_ += period;
+    
+    Eigen::Matrix3d R = orientation_d_.toRotationMatrix();
+    pose_[0] = R(0,0);
+    pose_[1] = R(1,0);
+    pose_[2] = R(2,0);
 
-    // auto state_interface = robot_hardware->get<franka_hw::FrankaStateInterface>();
-    // auto state_handle = state_interface->getHandle(arm_id + "_robot");
-    std::array<double, 7> joint_position = cartesian_pose_handle_->getRobotState().q_d;
+    pose_[4] = R(0,1);
+    pose_[5] = R(1,1);
+    pose_[6] = R(2,1);
 
-    double radius = 0.3;
-    double angle = M_PI / 4 * (1 - std::cos(M_PI / 5.0 * elapsed_time_.toSec()));
-    double delta_x = radius * std::sin(angle);
-    double delta_z = radius * (std::cos(angle) - 1);
-    std::array<double, 16> new_pose = initial_pose_;
-    new_pose[12] -= delta_x;
-    new_pose[14] -= delta_z;
-    cartesian_pose_handle_->setCommand(new_pose);
+    pose_[8] = R(0,2);
+    pose_[9] = R(1,2);
+    pose_[10] = R(2,2);
+    
+    pose_[12] = position_d_[0];
+    pose_[13] = position_d_[1];
+    pose_[14] = position_d_[2];
+    
+    cartesian_pose_handle_->setCommand(pose_);
+
   }
 
   void CartesianPoseController::CartesianTrajectoryCB(
     const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg)
     {
-        position_d_ << msg->transforms[0].translation.x, msg->transforms[0].translation.y, msg->transforms[0].translation.z;
+        // Comando in posizione
+        position_d_ << msg->transforms[0].translation.x,
+                       msg->transforms[0].translation.y,
+                       msg->transforms[0].translation.z;
 
         Eigen::Quaterniond last_orientation_d(orientation_d_);
 
-        orientation_d_.coeffs() << msg->transforms[0].rotation.x, msg->transforms[0].rotation.y,
-            msg->transforms[0].rotation.z, msg->transforms[0].rotation.w;
+        // Comando in orientamento
+        orientation_d_.coeffs() << msg->transforms[0].rotation.x,
+                                   msg->transforms[0].rotation.y,
+                                   msg->transforms[0].rotation.z,
+                                   msg->transforms[0].rotation.w;
 
         if (last_orientation_d.coeffs().dot(orientation_d_.coeffs()) < 0.0)
-        {
-            orientation_d_.coeffs() << -orientation_d_.coeffs();
-        }
+          orientation_d_.coeffs() << -orientation_d_.coeffs();
+        
     }
 } // namespace controllers
 

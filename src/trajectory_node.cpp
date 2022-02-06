@@ -23,7 +23,18 @@
 #include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 #include <franka_msgs/FrankaState.h>
 
+/* TODO: 
+- La posa iniziale è un vettore e viene inserita nel tipo tf::Transform perchè è semplice estrarre il quaternione
+- Il quaternione iniziale serve per generare la traiettoria.
+Si poteva fare a meno di tf::Transform? Sicuramente si. Provare a fare con Toon o Eigen che forse è ancora più semplice.
 
+- La traiettoria restituisce pos + quaternione. Si è preferito inviare il messaggio pos+quat invece che una matrice di transformazione
+perchè il passaggio da pos+quat a matrice di trasformazione è veloce e può essere fatto nel metodo update del controller.
+
+- Pro: il messaggio da pubblicare viene costruito velocemente.
+- Contro: il comando pos+quat deve essere tradotto in un vettore std::array<double,16>. 
+
+*/
 
 
 
@@ -44,6 +55,8 @@ int main(int argc, char** argv) {
     
     std::cout << "Configurazione iniziale (initial_transform) acquisita. \n";
     
+    // initial_transform è un tf e serve per ottenere il quaternione iniziale
+    
     TooN::Vector< 3 > pi({initial_transform.getOrigin().x(),
                           initial_transform.getOrigin().y(),
                           initial_transform.getOrigin().z()}); // initial_position
@@ -52,11 +65,13 @@ int main(int argc, char** argv) {
                                 initial_transform.getRotation()[2], initial_transform.getRotation()[3]});
 
     sun::UnitQuaternion initial_quaternion(vec_quat);
+
+
     std::cout << "Generazione della traiettoria in cartesiano \n";
 
     // Generazione della traiettoria su primitiva di percorso di tipo segmento:
     
-
+    // TODO: scegliere punto finale
     TooN::Vector< 3 > pf ({0.5,0.5,0.5});
     TooN::Vector<3> axis({0,0,1});
 
@@ -68,29 +83,27 @@ int main(int argc, char** argv) {
     sun::Cartesian_Independent_Traj cartesian_traj(line_traj,quat_traj);
 
 
-    std::string start_controller = "";
-    std::string stop_controller = "";
-    bool ok = switch_controller(start_controller,stop_controller);
+    // Accensione del controller
+    bool ok = switch_controller("cartesian_pose_controller","");
 
     if(ok)
-        std::cout << "Lo switch dei controller è stato effettuato!" << std::endl;
+        std::cout << "Lo switch del controller è stato effettuato!" << std::endl;
     else
-        std::cout << "Lo switch dei controller non è andato a buon fine " << std::endl;
+        std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
+
 
 
     double begin = ros::Time::now().toSec();
     double t;
 
-
     ros::Rate loop_rate(1000); // 1kHz
 
-    while (ros::ok() && t < Tf)
+    while (ros::ok() && !cartesian_traj.isCompleate(t))
     {
         
         t = ros::Time::now().toSec() - begin; // tempo trascorso
         
         trajectory_msgs::MultiDOFJointTrajectoryPoint msg;
-
        
         // Comando in posizione   
         TooN::Vector<3> posizione = cartesian_traj.getPosition(t);
