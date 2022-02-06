@@ -93,29 +93,31 @@ int main(int argc, char** argv) {
 
        
         // Comando in posizione   
-        msg.transforms[0].translation.x = cartesian_traj.getPosition(t)[0];
-        msg.transforms[0].translation.y = cartesian_traj.getPosition(t)[1];
-        msg.transforms[0].translation.z = cartesian_traj.getPosition(t)[2];
+        TooN::Vector<3> posizione = cartesian_traj.getPosition(t);
+        msg.transforms[0].translation.x = posizione[0];
+        msg.transforms[0].translation.y = posizione[1];
+        msg.transforms[0].translation.z = posizione[2];
         
-        msg.velocities[0].linear.x = cartesian_traj.getLinearVelocity(t)[0];
-        msg.velocities[0].linear.y = cartesian_traj.getLinearVelocity(t)[1];
-        msg.velocities[0].linear.z = cartesian_traj.getLinearVelocity(t)[2];
+        // Comando in velocità lineare
+        TooN::Vector<3> velocita_lineare = cartesian_traj.getLinearVelocity(t);
+        msg.velocities[0].linear.x = velocita_lineare[0];
+        msg.velocities[0].linear.y = velocita_lineare[1];
+        msg.velocities[0].linear.z = velocita_lineare[2];
         
-        // comando in orientamento 
+        // Comando in orientamento 
         sun::UnitQuaternion unit_quat = cartesian_traj.getQuaternion(t);
         msg.transforms[0].rotation.x = unit_quat.getS();
-        msg.transforms[0].rotation.y = unit_quat.getV()[0];
-        msg.transforms[0].rotation.z= unit_quat.getV()[1];
-        msg.transforms[0].rotation.w = unit_quat.getV()[2];
- 
-        
-        msg.velocities[0].angular.x = cartesian_traj.getAngularVelocity(t)[0];
-        msg.velocities[0].angular.x = cartesian_traj.getAngularVelocity(t)[1];
-        msg.velocities[0].angular.x = cartesian_traj.getAngularVelocity(t)[2];
-       
-        
-       
+        TooN::Vector<3> vec_quat = unit_quat.getV();
+        msg.transforms[0].rotation.y = vec_quat[0];
+        msg.transforms[0].rotation.z= vec_quat[1];
+        msg.transforms[0].rotation.w = vec_quat[2];
 
+        // Comando in velocità angolare
+        TooN::Vector<3> velocita_angolare = cartesian_traj.getAngularVelocity(t);
+        msg.velocities[0].angular.x = velocita_angolare[0];
+        msg.velocities[0].angular.x = velocita_angolare[1];
+        msg.velocities[0].angular.x = velocita_angolare[2];
+             
         command_pb.publish(msg);
 
         loop_rate.sleep();
