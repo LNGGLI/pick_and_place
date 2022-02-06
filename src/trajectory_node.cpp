@@ -16,6 +16,7 @@
 #include <sun_traj_lib/Cartesian_Independent_Traj.h>
 #include <sun_traj_lib/Quintic_Poly_Traj.h>
 #include <sun_traj_lib/Line_Segment_Traj.h>
+#include <sun_traj_lib/Rotation_Const_Axis_Traj.h>
 
 
 // Messages
@@ -47,20 +48,25 @@ int main(int argc, char** argv) {
                           initial_transform.getOrigin().y(),
                           initial_transform.getOrigin().z()}); // initial_position
 
+    TooN::Vector <4> vec_quat({initial_transform.getRotation()[0], initial_transform.getRotation()[1],
+                                initial_transform.getRotation()[2], initial_transform.getRotation()[3]});
 
+    sun::UnitQuaternion initial_quaternion(vec_quat);
     std::cout << "Generazione della traiettoria in cartesiano \n";
 
     // Generazione della traiettoria su primitiva di percorso di tipo segmento:
     
 
-    TooN::Vector< 3 > pf ({1,2,3});
+    TooN::Vector< 3 > pf ({0.5,0.5,0.5});
+    TooN::Vector<3> axis({0,0,1});
 
-    sun::Quintic_Poly_Traj qp(Tf, 0 , 1);
+    sun::Quintic_Poly_Traj qp(Tf, 0 , 1); // polinomio quintico.
+
     sun::Line_Segment_Traj line_traj(pi,pf,qp);
+    sun::Rotation_Const_Axis_Traj quat_traj(initial_quaternion,axis,qp);
 
+    sun::Cartesian_Independent_Traj cartesian_traj(line_traj,quat_traj);
 
-
-    // Cartesian_Independent_Traj cartesian_traj;
 
     std::string start_controller = "";
     std::string stop_controller = "";
@@ -84,12 +90,41 @@ int main(int argc, char** argv) {
         t = ros::Time::now().toSec() - begin; // tempo trascorso
         
         trajectory_msgs::MultiDOFJointTrajectoryPoint msg;
+
+       
+        // Comando in posizione   
+        msg.transforms[0].translation.x = cartesian_traj.getPosition(t)[0];
+        msg.transforms[0].translation.y = cartesian_traj.getPosition(t)[1];
+        msg.transforms[0].translation.z = cartesian_traj.getPosition(t)[2];
+        
+        msg.velocities[0].linear.x = cartesian_traj.getLinearVelocity(t)[0];
+        msg.velocities[0].linear.y = cartesian_traj.getLinearVelocity(t)[1];
+        msg.velocities[0].linear.z = cartesian_traj.getLinearVelocity(t)[2];
+        
+        // comando in orientamento 
+        sun::UnitQuaternion unit_quat = cartesian_traj.getQuaternion(t);
+        msg.transforms[0].rotation.x = unit_quat.getS();
+        msg.transforms[0].rotation.y = unit_quat.getV()[0];
+        msg.transforms[0].rotation.z= unit_quat.getV()[1];
+        msg.transforms[0].rotation.w = unit_quat.getV()[2];
+ 
+        
+        msg.velocities[0].angular.x = cartesian_traj.getAngularVelocity(t)[0];
+        msg.velocities[0].angular.x = cartesian_traj.getAngularVelocity(t)[1];
+        msg.velocities[0].angular.x = cartesian_traj.getAngularVelocity(t)[2];
+       
+        
+       
+
         command_pb.publish(msg);
 
         loop_rate.sleep();
         
     }
     
+
+
+
     
     return 0;
 
