@@ -13,6 +13,10 @@
 #include <ros/node_handle.h>
 #include <ros/time.h>
 
+#include <trajectory_msgs/MultiDOFJointTrajectory.h>
+
+
+#include <Eigen/Dense>
 #include <franka_hw/franka_cartesian_command_interface.h>
 #include <franka_hw/franka_model_interface.h>
 #include <franka_hw/trigger_rate.h>
@@ -38,8 +42,13 @@ class CartesianTorqueController : public controller_interface::MultiInterfaceCon
   std::array<double, 16> initial_pose_;
   franka_hw::TriggerRate rate_trigger_{1.0};
 
+  Eigen::Vector3d position_d_;
+  Eigen::Quaterniond orientation_d_;
 
-  // realtime_tools::RealtimePublisher<messaggio> tipo_publisher_;
+  ros::Subscriber sub_cartesian_trajectory_;
+  void CartesianTrajectoryCB(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg);
+
+  
 };
 
 }  // namespace controllers

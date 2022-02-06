@@ -9,6 +9,7 @@
 #include <franka/robot_state.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 
 #include <pick_and_place/pseudo_inversion.h>
 
@@ -21,8 +22,8 @@ namespace controllers
     std::vector<double> cartesian_stiffness_vector;
     std::vector<double> cartesian_damping_vector;
 
-    sub_equilibrium_pose_ = node_handle.subscribe(
-        "equilibrium_pose", 20, &CartesianImpedanceController::equilibriumPoseCallback, this,
+    sub_cartesian_trajectory_ = node_handle.subscribe(
+        "cartesian_trajectory_command", 20, &CartesianImpedanceController::CartesianTrajectoryCB, this,
         ros::TransportHints().reliable().tcpNoDelay());
 
     std::string arm_id;
@@ -103,9 +104,6 @@ namespace controllers
 
     position_d_.setZero();
     orientation_d_.coeffs() << 0.0, 0.0, 0.0, 1.0;
-    position_d_target_.setZero();
-    orientation_d_target_.coeffs() << 0.0, 0.0, 0.0, 1.0;
-
     cartesian_stiffness_.setZero();
     cartesian_damping_.setZero();
 
@@ -127,8 +125,7 @@ namespace controllers
     // set equilibrium point to current state
     position_d_ = initial_transform.translation();
     orientation_d_ = Eigen::Quaterniond(initial_transform.linear());
-    position_d_target_ = initial_transform.translation();
-    orientation_d_target_ = Eigen::Quaterniond(initial_transform.linear());
+
 
     // set nullspace equilibrium configuration to initial q
     q_d_nullspace_ = q_initial;
@@ -213,8 +210,24 @@ namespace controllers
     return tau_d_saturated;
   }
 
+  void CartesianImpedanceController::CartesianTrajectoryCB(
+        const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr &msg)
+    {
+        position_d_ << msg->transforms[0].translation.x, msg->transforms[0].translation.y, msg->transforms[0].translation.z;
 
-} // namespace controllers
+        Eigen::Quaterniond last_orientation_d(orientation_d_);
+
+        orientation_d_.coeffs() << msg->transforms[0].rotation.x, msg->transforms[0].rotation.y,
+            msg->transforms[0].rotation.z, msg->transforms[0].rotation.w;
+
+        if (last_orientation_d.coeffs().dot(orientation_d_.coeffs()) < 0.0)
+        {
+            orientation_d_.coeffs() << -orientation_d_.coeffs();
+        }
+    }
+
+
+  } // namespace controllers
 
 PLUGINLIB_EXPORT_CLASS(controllers::CartesianImpedanceController,
                        controller_interface::ControllerBase)

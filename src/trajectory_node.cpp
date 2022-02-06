@@ -5,44 +5,60 @@
 #include <string>
 
 // Server , Actions 
-#include <realtime_tools/realtime_publisher.h>
-
+#include <actionlib/client/simple_action_client.h>
 
 // Utils
 #include <ros/ros.h>
 #include <franka_gripper/franka_gripper.h>
-#include <actionlib/client/simple_action_client.h>
+#include <sun_traj_lib/Cartesian_Independent_Traj.h>
 #include <pick_and_place/trajectory_node.h>
+#include <sun_traj_lib/Quintic_Poly_Traj.h>
+#include <tf/transform_listener.h>
+
 
 // Messages
-#include <trajectory_msgs/JointTrajectoryPoint.h>
-#include <sensor_msgs/JointState.h>
+#include <trajectory_msgs/MultiDOFJointTrajectory.h>
+#include <franka_msgs/FrankaState.h>
 
 
 
 
+
+using namespace trajectory;
 
 int main(int argc, char** argv) {
 
     ros::init(argc, argv, "trajectory_node");
     ros::NodeHandle nh;
-    ros::Publisher command_pb = nh.advertise<trajectory_msgs::JointTrajectoryPoint>("joint_commands", 1);
-    ros::Subscriber state_sub = nh.subscribe<sensor_msgs::JointState>("/franka_state_controller/joint_states",1,stateCB);
-    
-
+    ros::Publisher command_pb = nh.advertise<trajectory_msgs::MultiDOFJointTrajectory>("cartesian_trajectory_command", 1);
+    ros::Subscriber pose_sub = nh.subscribe<franka_msgs::FrankaState>("/franka_state_controller/franka_states",1,stateCB);
 
     while(!initial_read){
         ros::spinOnce();
         ros::Duration(0.1).sleep();
-        
+        std::cout << "In attesa di leggere la posa iniziale\n";
     }
     
-    std::cout << "Configurazione iniziale acquisita: \n";
-    for(int i = 0 ; i < 7 ; i++)
-        std::cout << "q" << i+1 << "= " << q_init[i]<< "\n";
+    std::cout << "Configurazione iniziale (initial_transform) acquisita. \n";
     
+    std::cout << "Generazione della traiettoria in cartesiano \n";
 
-    std::string start_controller = "joint_reconfiguration_pilotato";
+    // Generazione della traiettoria su primitiva di percorso di tipo segmento:
+
+    tf::Vector3 pi = initial_transform.getOrigin();
+    // TooN::Vector< 3 > pi = {initial_position.getX(),initial_position.getY(),initial_position.getZ()}; // initial_position
+    // TooN::Vector< 3 > pf = {1,2,3};
+
+
+    //sun::Quintic_Poly_Traj polinomio_quintico(Tf, 0 , 1);
+
+    // Line_Segment_Traj line_traj(); (pi,pf,polinomio_quintico)
+
+
+
+    // Cartesian_Independent_Traj cartesian_traj;
+
+    std::string start_controller = "";
     std::string stop_controller = "";
     bool ok = switch_controller(start_controller,stop_controller);
 
@@ -62,29 +78,14 @@ int main(int argc, char** argv) {
     {
         
         t = ros::Time::now().toSec() - begin; // tempo trascorso
-        double tau = t/Tf; // asse dei tempi normalizzato
-
-        trajectory_msgs::JointTrajectoryPoint command_msg;
-
-        if(tau<1){ 
-        // Costruzione del messaggio che invia il comando q(t) = q_init + (q_goal - q_init)*q(t/tf)
-            for(int i = 0; i< 7; i++){
-                command_msg.positions.push_back(q_init[i] + (q_goal[i] - q_init[i])*(6*pow(tau,5)-15*pow(tau,4)+10*pow(tau,3)) );
-                }
-        }
-        else{
-            for(int i = 0; i< 7; i++){
-                command_msg.positions.push_back(q_goal[i]);
-                }
-        }
-
-        command_pb.publish(command_msg);
+        
+        trajectory_msgs::MultiDOFJointTrajectory msg;
+        command_pb.publish(msg);
 
         loop_rate.sleep();
         
     }
-        
-
+    
     
     return 0;
 

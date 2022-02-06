@@ -87,6 +87,7 @@ namespace controllers
                 << ex.what());
             return false;
         }
+
         // 3. joint_handles_
         auto *effort_joint_interface = robot_hw->get<hardware_interface::EffortJointInterface>();
         if (effort_joint_interface == nullptr)
@@ -95,6 +96,7 @@ namespace controllers
                 "CartesianTorqueController: Error getting effort joint interface from hardware");
             return false;
         }
+
         for (size_t i = 0; i < 7; ++i)
         {
             try
@@ -108,8 +110,6 @@ namespace controllers
                 return false;
             }
         }
-
-        
 
         return true;
     }
@@ -135,16 +135,16 @@ namespace controllers
 
         std::array<double, 7> tau_d_calculated;
         /*
-  for (size_t i = 0; i < 7; ++i) {
-   tau_d_calculated[i] = legge di controllo con 
-                        - robot_state.q_d[i] , robot_state.q[i];  
-                        - robot_state.dq_d[i] , robot_state.dq[i];
-                        Nota: 
-                        1. q_d è il valore della variabile di giunto desiderato
-                                ottenuto da inversione cinematica.
-                        2. q è il valore misurato della variabile di giunto.
-  }
-  */
+        for (size_t i = 0; i < 7; ++i) {
+        tau_d_calculated[i] = legge di controllo con 
+                                - robot_state.q_d[i] , robot_state.q[i];  
+                                - robot_state.dq_d[i] , robot_state.dq[i];
+                                Nota: 
+                                1. q_d è il valore della variabile di giunto desiderato
+                                        ottenuto da inversione cinematica.
+                                2. q è il valore misurato della variabile di giunto.
+        }
+        */
 
         for (size_t i = 0; i < 7; ++i)
         {
@@ -153,14 +153,30 @@ namespace controllers
 
         // Esempio di pubblicazione realtime
         /*
-  if (rate_trigger_() && publisher.trylock())
-  {
-
-      publisher.msg_.data = 2;
-      publisher.unlockAndPublish();
-  }
-    */
+        if (rate_trigger_() && publisher.trylock())
+        {
+            publisher.msg_.data = 2;
+            publisher.unlockAndPublish();
+        }
+            */
     }
+
+    void CartesianTorqueController::CartesianTrajectoryCB(
+        const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg)
+    {
+        position_d_ << msg->transforms[0].translation.x, msg->transforms[0].translation.y, msg->transforms[0].translation.z;
+
+        Eigen::Quaterniond last_orientation_d(orientation_d_);
+
+        orientation_d_.coeffs() << msg->transforms[0].rotation.x, msg->transforms[0].rotation.y,
+            msg->transforms[0].rotation.z, msg->transforms[0].rotation.w;
+
+        if (last_orientation_d.coeffs().dot(orientation_d_.coeffs()) < 0.0)
+        {
+            orientation_d_.coeffs() << -orientation_d_.coeffs();
+        }
+    }
+
 
 } // namespace controllers
 

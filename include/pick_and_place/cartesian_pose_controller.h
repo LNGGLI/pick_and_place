@@ -11,8 +11,11 @@
 #include <hardware_interface/robot_hw.h>
 #include <ros/node_handle.h>
 #include <ros/time.h>
+#include <Eigen/Dense>
 
 #include <franka_hw/franka_cartesian_command_interface.h>
+
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 
 namespace controllers {
 
@@ -29,6 +32,12 @@ class CartesianPoseController
   std::unique_ptr<franka_hw::FrankaCartesianPoseHandle> cartesian_pose_handle_;
   ros::Duration elapsed_time_;
   std::array<double, 16> initial_pose_{};
+
+  Eigen::Vector3d position_d_;
+  Eigen::Quaterniond orientation_d_;
+
+  ros::Subscriber sub_cartesian_trajectory_;
+  void CartesianTrajectoryCB(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg);
 };
 
 }  // namespace controllers

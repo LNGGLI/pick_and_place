@@ -9,6 +9,8 @@
 
 #include <controller_interface/multi_interface_controller.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
+
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/robot_hw.h>
 #include <ros/node_handle.h>
@@ -40,26 +42,20 @@ class CartesianImpedanceController : public controller_interface::MultiInterface
   std::unique_ptr<franka_hw::FrankaModelHandle> model_handle_;
   std::vector<hardware_interface::JointHandle> joint_handles_;
 
-  double filter_params_{0.005};
+  
   double nullspace_stiffness_{20.0};
-  double nullspace_stiffness_target_{20.0};
   const double delta_tau_max_{1.0};
   Eigen::Matrix<double, 6, 6> cartesian_stiffness_;
-  Eigen::Matrix<double, 6, 6> cartesian_stiffness_target_;
   Eigen::Matrix<double, 6, 6> cartesian_damping_;
-  Eigen::Matrix<double, 6, 6> cartesian_damping_target_;
   Eigen::Matrix<double, 7, 1> q_d_nullspace_;
+
   Eigen::Vector3d position_d_;
   Eigen::Quaterniond orientation_d_;
-  std::mutex position_and_orientation_d_target_mutex_;
-  Eigen::Vector3d position_d_target_;
-  Eigen::Quaterniond orientation_d_target_;
 
- 
-
-  // Equilibrium pose subscriber
-  ros::Subscriber sub_equilibrium_pose_;
-  void equilibriumPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
+  // Subscriber alla trajectory
+  ros::Subscriber sub_cartesian_trajectory_;
+  void CartesianTrajectoryCB(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg);
+  
 };
 
 }  // namespace controllers
