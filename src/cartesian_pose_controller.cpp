@@ -14,6 +14,7 @@
 #include <ros/ros.h>
 
 #include <Eigen/Geometry> 
+#include <sun_math_toolbox/UnitQuaternion.h>
 
 
 namespace controllers
@@ -75,21 +76,26 @@ namespace controllers
 
   void CartesianPoseController::update(const ros::Time & /* time */, const ros::Duration &period)
   {
+    // Eigen::Matrix3d R = orientation_d_.toRotationMatrix();
+
+    TooN::Vector<4> quat = TooN::makeVector(orientation_d_.x(),orientation_d_.y(),orientation_d_.z(),orientation_d_.w());
+    sun::UnitQuaternion unit_quat(quat);
     
-    Eigen::Matrix3d R = orientation_d_.toRotationMatrix();
+    
+    TooN::Matrix<3> R = unit_quat.R();
     pose_ = initial_pose_;
     
-    pose_[0] = R(0,0);
-    pose_[1] = R(1,0);
-    pose_[2] = R(2,0);
+    pose_[0] = R[0][0];
+    pose_[1] = R[1][0];
+    pose_[2] = R[2][0];
 
-    pose_[4] = R(0,1);
-    pose_[5] = R(1,1);
-    pose_[6] = R(2,1);
+    pose_[4] = R[0][1];
+    pose_[5] = R[1][1];
+    pose_[6] = R[2][1];
 
-    pose_[8] = R(0,2);
-    pose_[9] = R(1,2);
-    pose_[10] = R(2,2);
+    pose_[8] = R[0][2];
+    pose_[9] = R[1][2];
+    pose_[10] = R[2][2];
     
     pose_[12] = position_d_[0];
     pose_[13] = position_d_[1];
@@ -116,15 +122,20 @@ namespace controllers
       std::cout << "\n Matrice di rotazione letta nell'update():";
       for(int i = 0; i < 3 ; i++ ){
                   for(int j = 0 ; j<3 ; j++)
-                      std::cout << R(i,j) << " ";
+                      std::cout << R[i][j] << " ";
                   std::cout << "\n";
       }
 
 
     }
 
+    std::cout << "\n Pose: " << std::endl;
+      for(int i = 0; i< 16; i++)
+        std::cout << pose_[i] << " ";
+    std::cout << "\n";
 
-    cartesian_pose_handle_->setCommand(pose_);
+
+    cartesian_pose_handle_->setCommand(initial_pose_);
 
   }
 
@@ -146,6 +157,7 @@ namespace controllers
 
         if (last_orientation_d.coeffs().dot(orientation_d_.coeffs()) < 0.0)
           orientation_d_.coeffs() << -orientation_d_.coeffs();
+        
         
     }
 } // namespace controllers

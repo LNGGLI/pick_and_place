@@ -77,7 +77,7 @@ int main(int argc, char **argv)
         std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
 
     
-
+    ros::Duration(1.0).sleep();
     double begin = ros::Time::now().toSec();
     double t;
     
