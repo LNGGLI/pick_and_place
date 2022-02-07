@@ -57,7 +57,7 @@ namespace controllers
       return false;
     }
 
-    sub_cartesian_trajectory_ = node_handle.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("cartesian_trajectory_command", 1, &CartesianPoseController::CartesianTrajectoryCB, this);
+    sub_cartesian_trajectory_ = node_handle.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/cartesian_trajectory_command", 1, &CartesianPoseController::CartesianTrajectoryCB, this);
 
 
     return true;
@@ -65,8 +65,10 @@ namespace controllers
 
 
   void CartesianPoseController::starting(const ros::Time& /* time */) {
-    pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_d;
+    initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE;
+    
     elapsed_time_ = ros::Duration(0.0);
+
   }
 
 
@@ -75,6 +77,8 @@ namespace controllers
   {
     
     Eigen::Matrix3d R = orientation_d_.toRotationMatrix();
+    pose_ = initial_pose_;
+    
     pose_[0] = R(0,0);
     pose_[1] = R(1,0);
     pose_[2] = R(2,0);
@@ -90,7 +94,36 @@ namespace controllers
     pose_[12] = position_d_[0];
     pose_[13] = position_d_[1];
     pose_[14] = position_d_[2];
-    
+
+    // Stampa solo la prima volta
+    if(start){
+      start = false;
+      for(int i = 0; i< 16; i++){
+        if(abs(initial_pose_[i]-pose_[i])>0.1){
+          std::cout << " Posa ottenuta troppo differente dalla iniziale: elemento " << i+1 << "\n";
+          std::cout << " Intial_pose_["<<i<<"] = " << initial_pose_[i] << " mentre pose_["<<i<<"] = " << pose_[i] << "\n";
+        }
+      }
+
+      std::cout << "Pose: " << std::endl;
+      for(int i = 0; i< 16; i++)
+        std::cout << pose_[i] << " ";
+
+      std::cout << "\n initial_pose: " << std::endl;
+      for(int i = 0; i< 16; i++)
+        std::cout << initial_pose_[i] << " ";
+
+      std::cout << "\n Matrice di rotazione letta nell'update():";
+      for(int i = 0; i < 3 ; i++ ){
+                  for(int j = 0 ; j<3 ; j++)
+                      std::cout << R(i,j) << " ";
+                  std::cout << "\n";
+      }
+
+
+    }
+
+
     cartesian_pose_handle_->setCommand(pose_);
 
   }

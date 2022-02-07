@@ -1,5 +1,5 @@
 cartesian_torque_controller:
-    type: pick_and_place/CartesianTorqueController
+    type: controllers/CartesianTorqueController
     arm_id: panda
     joint_names:
         - panda_joint1
@@ -12,11 +12,11 @@ cartesian_torque_controller:
     publish_rate: 10.0
 
 cartesian_pose_controller:
-    type: pick_and_place/CartesianPoseController
+    type: controllers/CartesianPoseController
     arm_id: panda
 
 cartesian_impedance_controller:
-    type: pick_and_place/CartesianImpedanceController
+    type: controllers/CartesianImpedanceController
     arm_id: panda
     joint_names:
         - panda_joint1

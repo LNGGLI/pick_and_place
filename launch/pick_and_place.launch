@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<launch>
+  <arg name="robot_ip" />
+  <arg name="load_gripper" default="true" />
+  
+  <!-- Load del franka_control e del gripper  -->
+  <include file="$(find franka_control)/launch/franka_control.launch" >
+    <arg name="robot_ip" value="$(arg robot_ip)" />
+    <arg name="load_gripper" value="$(arg load_gripper)" />
+  </include>
+  
+  <!-- Load dei parametri dei controller -->
+  <rosparam command="load" file="$(find pick_and_place)/config/controller.yaml" />
+  
+  <!-- Load dei controller -->
+  <node name="pose_controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="--stopped cartesian_pose_controller"/>
+    
+  
+  <!-- Run del planner -->
+  
+</launch>

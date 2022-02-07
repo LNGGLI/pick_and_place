@@ -32,6 +32,9 @@ class CartesianPoseController
   std::unique_ptr<franka_hw::FrankaCartesianPoseHandle> cartesian_pose_handle_;
   ros::Duration elapsed_time_;
   std::array<double, 16> pose_{};
+  std::array<double, 16> initial_pose_{};
+  bool start = true;
+
 
   Eigen::Vector3d position_d_;
   Eigen::Quaterniond orientation_d_;

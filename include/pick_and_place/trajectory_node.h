@@ -84,6 +84,21 @@ namespace trajectory{
         initial_transform = TooN::SE3<double>(R_so3,p);
         
         initial_read = true;
+
+        // Stampa posizione e matrice di rotazione
+        
+        std::cout << "Posizione iniziale: \n"
+                  << "x:" <<  initial_transform.get_translation()[0] << "\n"
+                  << "y:" <<  initial_transform.get_translation()[1] << "\n"
+                  << "z:" <<  initial_transform.get_translation()[2] << "\n";
+
+        std::cout << "Matrice di rotazione iniziale: \n";
+        for(int i = 0; i < 3;i++){
+            for(int j = 0; j < 3; j++)
+                std::cout << R(i,j) << " ";
+            std::cout << std::endl;
+        }
+        std::cout << "\n";
     }
 
 
