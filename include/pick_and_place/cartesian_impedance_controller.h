@@ -17,7 +17,6 @@
 #include <ros/time.h>
 #include <Eigen/Dense>
 
-#include <pick_and_place/compliance_paramConfig.h>
 #include <franka_hw/franka_model_interface.h>
 #include <franka_hw/franka_state_interface.h>
 

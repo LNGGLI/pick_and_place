@@ -30,6 +30,7 @@ realtime_tools
 roscpp
 rospy
 sun_traj_lib
+ros_toon
 
 )
 

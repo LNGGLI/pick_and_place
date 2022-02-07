@@ -55,16 +55,13 @@ int main(int argc, char** argv) {
     
     std::cout << "Configurazione iniziale (initial_transform) acquisita. \n";
     
-    // initial_transform è un tf e serve per ottenere il quaternione iniziale
+    // initial_transform è una Toon::SE3 
+
+    TooN::Vector< 3 > pi = initial_transform.get_translation(); // initial_position
+
     
-    TooN::Vector< 3 > pi({initial_transform.getOrigin().x(),
-                          initial_transform.getOrigin().y(),
-                          initial_transform.getOrigin().z()}); // initial_position
 
-    TooN::Vector <4> vec_quat({initial_transform.getRotation()[0], initial_transform.getRotation()[1],
-                                initial_transform.getRotation()[2], initial_transform.getRotation()[3]});
-
-    sun::UnitQuaternion initial_quaternion(vec_quat);
+    sun::UnitQuaternion init_quat(initial_transform.get_rotation().get_matrix());
 
 
     std::cout << "Generazione della traiettoria in cartesiano \n";
@@ -72,13 +69,13 @@ int main(int argc, char** argv) {
     // Generazione della traiettoria su primitiva di percorso di tipo segmento:
     
     // TODO: scegliere punto finale
-    TooN::Vector< 3 > pf ({0.5,0.5,0.5});
-    TooN::Vector<3> axis({0,0,1});
+    TooN::Vector<3,double > pf ({0.5,0.5,0.5});
+    TooN::Vector<3,double> axis({0,0,1});
 
     sun::Quintic_Poly_Traj qp(Tf, 0 , 1); // polinomio quintico.
 
     sun::Line_Segment_Traj line_traj(pi,pf,qp);
-    sun::Rotation_Const_Axis_Traj quat_traj(initial_quaternion,axis,qp);
+    sun::Rotation_Const_Axis_Traj quat_traj(init_quat,axis,qp);
 
     sun::Cartesian_Independent_Traj cartesian_traj(line_traj,quat_traj);
 
@@ -106,13 +103,13 @@ int main(int argc, char** argv) {
         trajectory_msgs::MultiDOFJointTrajectoryPoint msg;
        
         // Comando in posizione   
-        TooN::Vector<3> posizione = cartesian_traj.getPosition(t);
+        TooN::Vector<3,double> posizione = cartesian_traj.getPosition(t);
         msg.transforms[0].translation.x = posizione[0];
         msg.transforms[0].translation.y = posizione[1];
         msg.transforms[0].translation.z = posizione[2];
         
         // Comando in velocità lineare
-        TooN::Vector<3> velocita_lineare = cartesian_traj.getLinearVelocity(t);
+        TooN::Vector<3,double> velocita_lineare = cartesian_traj.getLinearVelocity(t);
         msg.velocities[0].linear.x = velocita_lineare[0];
         msg.velocities[0].linear.y = velocita_lineare[1];
         msg.velocities[0].linear.z = velocita_lineare[2];
@@ -120,13 +117,13 @@ int main(int argc, char** argv) {
         // Comando in orientamento 
         sun::UnitQuaternion unit_quat = cartesian_traj.getQuaternion(t);
         msg.transforms[0].rotation.x = unit_quat.getS();
-        TooN::Vector<3> vec_quat = unit_quat.getV();
+        TooN::Vector<3,double> vec_quat = unit_quat.getV();
         msg.transforms[0].rotation.y = vec_quat[0];
         msg.transforms[0].rotation.z= vec_quat[1];
         msg.transforms[0].rotation.w = vec_quat[2];
 
         // Comando in velocità angolare
-        TooN::Vector<3> velocita_angolare = cartesian_traj.getAngularVelocity(t);
+        TooN::Vector<3,double> velocita_angolare = cartesian_traj.getAngularVelocity(t);
         msg.velocities[0].angular.x = velocita_angolare[0];
         msg.velocities[0].angular.x = velocita_angolare[1];
         msg.velocities[0].angular.x = velocita_angolare[2];
