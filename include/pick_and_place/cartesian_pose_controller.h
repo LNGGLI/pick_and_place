@@ -20,6 +20,11 @@
 #include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 #include <trajectory_msgs/JointTrajectoryPoint.h>
 
+#include <sun_traj_lib/Cartesian_Independent_Traj.h>
+#include <sun_traj_lib/Quintic_Poly_Traj.h>
+#include <sun_traj_lib/Line_Segment_Traj.h>
+#include <sun_traj_lib/Rotation_Const_Axis_Traj.h>
+
 namespace controllers {
 
 class CartesianPoseController
@@ -42,12 +47,7 @@ class CartesianPoseController
   Eigen::Vector3d position_d_;
   Eigen::Quaterniond orientation_d_;
 
-  ros::Subscriber sub_cartesian_trajectory_;
-  void CartesianTrajectoryCB(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg);
-  
-  std::array<double, 7> last_q_{};
-  std::array<double, 7> last_q_d_{};
-  ros::Publisher joints_publisher_;
+  sun::Line_Segment_Traj line_traj_;
 
 };
 
