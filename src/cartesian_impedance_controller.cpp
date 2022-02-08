@@ -19,12 +19,8 @@ namespace controllers
   bool CartesianImpedanceController::init(hardware_interface::RobotHW *robot_hw,
                                           ros::NodeHandle &node_handle)
   {
-    std::vector<double> cartesian_stiffness_vector;
-    std::vector<double> cartesian_damping_vector;
+    
 
-    sub_cartesian_trajectory_ = node_handle.subscribe(
-        "cartesian_trajectory_command", 20, &CartesianImpedanceController::CartesianTrajectoryCB, this,
-        ros::TransportHints().reliable().tcpNoDelay());
 
     std::string arm_id;
     if (!node_handle.getParam("arm_id", arm_id))
@@ -104,8 +100,22 @@ namespace controllers
 
     position_d_.setZero();
     orientation_d_.coeffs() << 0.0, 0.0, 0.0, 1.0;
-    cartesian_stiffness_.setZero();
-    cartesian_damping_.setZero();
+
+    cartesian_stiffness_.setIdentity();
+    cartesian_stiffness_(0,0) = 200.0;
+    cartesian_stiffness_(1,1) = 10.0;
+    cartesian_stiffness_(2,2) = 200.0;
+    cartesian_stiffness_(3,3) = 10.0;
+    cartesian_stiffness_(4,4) = 10.0;
+    cartesian_stiffness_(5,5) = 30.0;
+
+    cartesian_damping_ = cartesian_stiffness_;
+    
+
+
+    sub_cartesian_trajectory_ = node_handle.subscribe(
+        "/cartesian_trajectory_command", 20, &CartesianImpedanceController::CartesianTrajectoryCB, this,
+        ros::TransportHints().reliable().tcpNoDelay());
 
     return true;
   }
@@ -126,9 +136,12 @@ namespace controllers
     position_d_ = initial_transform.translation();
     orientation_d_ = Eigen::Quaterniond(initial_transform.linear());
 
+     std::cout << "Posizione iniziale: \n"
+               << "x:" <<  position_d_[0] << "\n"
+               << "y:" <<  position_d_[1] << "\n"
+               << "z:" <<  position_d_[2] << "\n";
 
-    // set nullspace equilibrium configuration to initial q
-    q_d_nullspace_ = q_initial;
+
   }
 
   void CartesianImpedanceController::update(const ros::Time & /*time*/,
@@ -151,6 +164,14 @@ namespace controllers
     Eigen::Vector3d position(transform.translation());
     Eigen::Quaterniond orientation(transform.linear());
 
+
+    std::cout << "Posizione traiettoria: \n"
+               << "x:" <<  position_d_[0] << "\n"
+               << "y:" <<  position_d_[1] << "\n"
+               << "z:" <<  position_d_[2] << "\n";
+    
+    
+
     // compute error to desired pose
     // position error
     Eigen::Matrix<double, 6, 1> error;
@@ -167,31 +188,37 @@ namespace controllers
     // Transform to base frame
     error.tail(3) << -transform.linear() * error.tail(3);
 
+
+    std::cout << "\nErrore traiettoria: \n";
+    for(int i = 0 ; i < 6; i++)
+      printf("La componente %d dell'errore e': %f \n",i,error(i,0));
+           
     // compute control
     // allocate variables
-    Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_d(7);
-
-    // pseudoinverse for nullspace handling
-    // kinematic pseuoinverse
-    Eigen::MatrixXd jacobian_transpose_pinv;
-    pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
+    Eigen::VectorXd tau_task(7), tau_d(7);
 
     // Cartesian PD control with damping ratio = 1
     tau_task << jacobian.transpose() *
                     (-cartesian_stiffness_ * error - cartesian_damping_ * (jacobian * dq));
-    // nullspace PD control with damping ratio = 1
-    tau_nullspace << (Eigen::MatrixXd::Identity(7, 7) -
-                      jacobian.transpose() * jacobian_transpose_pinv) *
-                         (nullspace_stiffness_ * (q_d_nullspace_ - q) -
-                          (2.0 * sqrt(nullspace_stiffness_)) * dq);
+
+
+    std::cout << "Tau task: \n";
+   
+    for(int i = 0 ; i < 7; i++)
+      printf("La componente %d di Tau task e': %f \n",i,tau_task(i,0));
+
+
+
     // Desired torque
-    tau_d << tau_task + tau_nullspace + coriolis;
+    tau_d << tau_task;// + coriolis;
     // Saturate torque rate to avoid discontinuities
     tau_d << saturateTorqueRate(tau_d, tau_J_d);
     for (size_t i = 0; i < 7; ++i)
     {
       joint_handles_[i].setCommand(tau_d(i));
+      std::cout << "Ho comandato: tau_d:" << tau_d(i) << "\n";
     }
+
 
    
   }
@@ -213,17 +240,21 @@ namespace controllers
   void CartesianImpedanceController::CartesianTrajectoryCB(
         const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr &msg)
     {
-        position_d_ << msg->transforms[0].translation.x, msg->transforms[0].translation.y, msg->transforms[0].translation.z;
+         // Comando in posizione
+        position_d_ << msg->transforms[0].translation.x,
+                       msg->transforms[0].translation.y,
+                       msg->transforms[0].translation.z;
 
         Eigen::Quaterniond last_orientation_d(orientation_d_);
 
-        orientation_d_.coeffs() << msg->transforms[0].rotation.x, msg->transforms[0].rotation.y,
-            msg->transforms[0].rotation.z, msg->transforms[0].rotation.w;
+        // Comando in orientamento
+        orientation_d_.coeffs() << msg->transforms[0].rotation.x,
+                                   msg->transforms[0].rotation.y,
+                                   msg->transforms[0].rotation.z,
+                                   msg->transforms[0].rotation.w;
 
         if (last_orientation_d.coeffs().dot(orientation_d_.coeffs()) < 0.0)
-        {
-            orientation_d_.coeffs() << -orientation_d_.coeffs();
-        }
+          orientation_d_.coeffs() << -orientation_d_.coeffs();
     }
 
 

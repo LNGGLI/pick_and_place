@@ -27,7 +27,7 @@ namespace trajectory{
     
 
     bool initial_read = false;
-    double Tf = 10;
+    double Tf = 20;
 
     bool switch_controller(const std::string& start_controller, const std::string& stop_controller){
 

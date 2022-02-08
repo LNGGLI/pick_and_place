@@ -41,15 +41,18 @@ class CartesianImpedanceController : public controller_interface::MultiInterface
   std::unique_ptr<franka_hw::FrankaModelHandle> model_handle_;
   std::vector<hardware_interface::JointHandle> joint_handles_;
 
-  
-  double nullspace_stiffness_{20.0};
+  double filter_params_{0.005};
+
   const double delta_tau_max_{1.0};
+
   Eigen::Matrix<double, 6, 6> cartesian_stiffness_;
+
   Eigen::Matrix<double, 6, 6> cartesian_damping_;
-  Eigen::Matrix<double, 7, 1> q_d_nullspace_;
+ 
 
   Eigen::Vector3d position_d_;
   Eigen::Quaterniond orientation_d_;
+
 
   // Subscriber alla trajectory
   ros::Subscriber sub_cartesian_trajectory_;

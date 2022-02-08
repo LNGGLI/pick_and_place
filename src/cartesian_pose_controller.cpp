@@ -68,8 +68,9 @@ namespace controllers
 
   void CartesianPoseController::starting(const ros::Time& /* time */) {
     initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE;
-    
+    pose_ = initial_pose_;
     elapsed_time_ = ros::Duration(0.0);
+    position_d_ = {initial_pose_[12],initial_pose_[13],initial_pose_[14]};
 
   }
 
@@ -79,8 +80,7 @@ namespace controllers
   {
     // Eigen::Matrix3d R = orientation_d_.toRotationMatrix(); Da un valore sbagliato
     pose_ = initial_pose_;
-    std::array<double,16> actual_pose = cartesian_pose_handle_->getRobotState().O_T_EE;
-
+    
     // TooN::Vector<4> quat = TooN::makeVector(orientation_d_.x(),orientation_d_.y(),orientation_d_.z(),orientation_d_.w());
     // sun::UnitQuaternion unit_quat(quat);
     // TooN::Matrix<3> R = unit_quat.R();
@@ -128,14 +128,6 @@ namespace controllers
 
 
     }
-
-    // std::cout << "\nPose commanded: " << std::endl;
-    //   for(int i = 0; i< 16; i++)
-    //     std::cout << pose_[i] << " ";
-
-    // std::cout << "\n Actual pose: " << std::endl;
-    //   for(int i = 0; i< 16; i++)
-    //   std::cout << actual_pose[i] << " ";
 
   
     cartesian_pose_handle_->setCommand(pose_);
