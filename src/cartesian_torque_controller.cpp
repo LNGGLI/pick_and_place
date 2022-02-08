@@ -44,6 +44,28 @@ namespace controllers
         }
         rate_trigger_ = franka_hw::TriggerRate(publish_rate);
 
+        if (!node_handle.getParam("k_gains", k_gains_) || k_gains_.size() != 7)
+        {
+            ROS_ERROR(
+                "JointImpedanceExampleController:  Invalid or no k_gain parameters provided, aborting "
+                "controller init!");
+            return false;
+        }
+
+        if (!node_handle.getParam("d_gains", d_gains_) || d_gains_.size() != 7)
+        {
+            ROS_ERROR(
+                "JointImpedanceExampleController:  Invalid or no d_gain parameters provided, aborting "
+                "controller init!");
+            return false;
+        }
+
+        if (!node_handle.getParam("coriolis_factor", coriolis_factor_))
+        {
+            ROS_INFO_STREAM("JointImpedanceExampleController: coriolis_factor not found. Defaulting to "
+                            << coriolis_factor_);
+        }
+
         // CREAZIONE DEGLI HANDLER
 
         // 1. model_handle_
@@ -111,6 +133,8 @@ namespace controllers
             }
         }
 
+        torques_publisher_.init(node_handle, "torque_comparison", 1);
+        std::fill(dq_filtered_.begin(), dq_filtered_.end(), 0);
         return true;
     }
 
@@ -122,34 +146,55 @@ namespace controllers
     void CartesianTorqueController::update(const ros::Time & /*time*/,
                                            const ros::Duration &period)
     {
+        // Letto da topic position_d_  e orientation_d_ aggiornati
 
-        std::array<double, 16> pose_desired = initial_pose_;
+        pose_ = initial_pose_;
+        pose_[12] = position_d_[0]; // x
+        pose_[13] = position_d_[1]; // y
+        pose_[14] = position_d_[2]; // z
 
         // Il comando in cartesiano non viene eseguito ma viene utilizzato per calcolare
         // le variabili di giunto corrispondenti attraverso inversione cinematica.
-        cartesian_pose_handle_->setCommand(pose_desired);
+        cartesian_pose_handle_->setCommand(pose_);
 
         franka::RobotState robot_state = cartesian_pose_handle_->getRobotState();
         std::array<double, 7> coriolis = model_handle_->getCoriolis();
         std::array<double, 7> gravity = model_handle_->getGravity();
 
         std::array<double, 7> tau_d_calculated;
-        /*
-        for (size_t i = 0; i < 7; ++i) {
-        tau_d_calculated[i] = legge di controllo con 
-                                - robot_state.q_d[i] , robot_state.q[i];  
-                                - robot_state.dq_d[i] , robot_state.dq[i];
-                                Nota: 
-                                1. q_d è il valore della variabile di giunto desiderato
-                                        ottenuto da inversione cinematica.
-                                2. q è il valore misurato della variabile di giunto.
-        }
-        */
+        
+        double alpha = 0.99;
+
+        for (size_t i = 0; i < 7; i++)
+            dq_filtered_[i] = (1 - alpha) * dq_filtered_[i] + alpha * robot_state.dq[i];
 
         for (size_t i = 0; i < 7; ++i)
         {
-            joint_handles_[i].setCommand(tau_d_calculated[i]);
+            tau_d_calculated[i] = coriolis_factor_ * coriolis[i] +
+                                  k_gains_[i] * (robot_state.q_d[i] - robot_state.q[i]) +
+                                  d_gains_[i] * (robot_state.dq_d[i] - dq_filtered_[i]);
         }
+
+        /*legge di controllo con 
+                        - robot_state.q_d[i] , robot_state.q[i];  
+                        - robot_state.dq_d[i] , robot_state.dq[i];
+                        Nota: 
+                        1. q_d è il valore della variabile di giunto desiderato
+                                ottenuto dalla inversione cinematica.
+                        2. q è il valore misurato della variabile di giunto.
+        */
+
+
+        // Maximum torque difference with a sampling rate of 1 kHz. The maximum torque rate is
+        // 1000 * (1 / sampling_time).
+        std::array<double, 7> tau_d_saturated = saturateTorqueRate(tau_d_calculated, robot_state.tau_J_d);
+
+        for (size_t i = 0; i < 7; ++i)
+            joint_handles_[i].setCommand(tau_d_saturated[i]);
+
+        
+        for (size_t i = 0; i < 7; ++i)
+            joint_handles_[i].setCommand(tau_d_calculated[i]);
 
         // Esempio di pubblicazione realtime
         /*
@@ -159,22 +204,67 @@ namespace controllers
             publisher.unlockAndPublish();
         }
             */
+
+
+        // Pubblicazione su topic delle coppie del robot
+
+        // if (rate_trigger_() && torques_publisher_.trylock())
+        // {
+        //     std::array<double, 7> tau_j = robot_state.tau_J;
+        //     std::array<double, 7> tau_error;
+        //     double error_rms(0.0);
+        //     for (size_t i = 0; i < 7; ++i)
+        //     {
+        //         tau_error[i] = last_tau_d_[i] - tau_j[i];
+        //         error_rms += std::sqrt(std::pow(tau_error[i], 2.0)) / 7.0;
+        //     }
+        //     torques_publisher_.msg_.root_mean_square_error = error_rms;
+        //     for (size_t i = 0; i < 7; ++i)
+        //     {
+        //         torques_publisher_.msg_.tau_commanded[i] = last_tau_d_[i];
+        //         torques_publisher_.msg_.tau_error[i] = tau_error[i];
+        //         torques_publisher_.msg_.tau_measured[i] = tau_j[i];
+        //     }
+        //     torques_publisher_.unlockAndPublish();
+        // }
+
+        // for (size_t i = 0; i < 7; ++i)
+        // {
+        //     last_tau_d_[i] = tau_d_saturated[i] + gravity[i];
+        // }
+    }
+
+    std::array<double, 7> CartesianTorqueController::saturateTorqueRate(
+        const std::array<double, 7> &tau_d_calculated,
+        const std::array<double, 7> &tau_J_d)
+    { // NOLINT (readability-identifier-naming)
+        std::array<double, 7> tau_d_saturated{};
+        for (size_t i = 0; i < 7; i++)
+        {
+            double difference = tau_d_calculated[i] - tau_J_d[i];
+            tau_d_saturated[i] = tau_J_d[i] + std::max(std::min(difference, kDeltaTauMax), -kDeltaTauMax);
+        }
+        return tau_d_saturated;
     }
 
     void CartesianTorqueController::CartesianTrajectoryCB(
         const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg)
     {
-        position_d_ << msg->transforms[0].translation.x, msg->transforms[0].translation.y, msg->transforms[0].translation.z;
+        // Comando in posizione
+        position_d_ << msg->transforms[0].translation.x,
+                       msg->transforms[0].translation.y,
+                       msg->transforms[0].translation.z;
 
         Eigen::Quaterniond last_orientation_d(orientation_d_);
 
-        orientation_d_.coeffs() << msg->transforms[0].rotation.x, msg->transforms[0].rotation.y,
-            msg->transforms[0].rotation.z, msg->transforms[0].rotation.w;
+        // Comando in orientamento
+        orientation_d_.coeffs() << msg->transforms[0].rotation.x,
+                                   msg->transforms[0].rotation.y,
+                                   msg->transforms[0].rotation.z,
+                                   msg->transforms[0].rotation.w;
 
         if (last_orientation_d.coeffs().dot(orientation_d_.coeffs()) < 0.0)
-        {
-            orientation_d_.coeffs() << -orientation_d_.coeffs();
-        }
+          orientation_d_.coeffs() << -orientation_d_.coeffs();
     }
 
 

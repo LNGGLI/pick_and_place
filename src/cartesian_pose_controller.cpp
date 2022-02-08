@@ -58,8 +58,9 @@ namespace controllers
       return false;
     }
 
-    sub_cartesian_trajectory_ = node_handle.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/cartesian_trajectory_command", 1, &CartesianPoseController::CartesianTrajectoryCB, this);
+    sub_cartesian_trajectory_ = node_handle.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/cartesian_trajectory_command", 10, &CartesianPoseController::CartesianTrajectoryCB, this);
 
+    joints_publisher_ = node_handle.advertise<trajectory_msgs::JointTrajectoryPoint>("/jointsIK", 1);
 
     return true;
   }
@@ -76,32 +77,31 @@ namespace controllers
 
   void CartesianPoseController::update(const ros::Time & /* time */, const ros::Duration &period)
   {
-    // Eigen::Matrix3d R = orientation_d_.toRotationMatrix();
-
-    TooN::Vector<4> quat = TooN::makeVector(orientation_d_.x(),orientation_d_.y(),orientation_d_.z(),orientation_d_.w());
-    sun::UnitQuaternion unit_quat(quat);
-    
-    
-    TooN::Matrix<3> R = unit_quat.R();
+    // Eigen::Matrix3d R = orientation_d_.toRotationMatrix(); Da un valore sbagliato
     pose_ = initial_pose_;
+    std::array<double,16> actual_pose = cartesian_pose_handle_->getRobotState().O_T_EE;
+
+    // TooN::Vector<4> quat = TooN::makeVector(orientation_d_.x(),orientation_d_.y(),orientation_d_.z(),orientation_d_.w());
+    // sun::UnitQuaternion unit_quat(quat);
+    // TooN::Matrix<3> R = unit_quat.R();
     
-    pose_[0] = R[0][0];
-    pose_[1] = R[1][0];
-    pose_[2] = R[2][0];
 
-    pose_[4] = R[0][1];
-    pose_[5] = R[1][1];
-    pose_[6] = R[2][1];
+    // pose_[0] = R[0][0];
+    // pose_[1] = R[1][0];
+    // pose_[2] = R[2][0];
+    // pose_[4] = R[0][1];
+    // pose_[5] = R[1][1];
+    // pose_[6] = R[2][1];
+    // pose_[8] = R[0][2];
+    // pose_[9] = R[1][2];
+    // pose_[10] = R[2][2];
 
-    pose_[8] = R[0][2];
-    pose_[9] = R[1][2];
-    pose_[10] = R[2][2];
     
-    pose_[12] = position_d_[0];
-    pose_[13] = position_d_[1];
-    pose_[14] = position_d_[2];
+    pose_[12] = position_d_[0]; // x
+    pose_[13] = position_d_[1]; // y
+    pose_[14] = position_d_[2]; // z
 
-    // Stampa solo la prima volta
+    //Stampa solo la prima volta
     if(start){
       start = false;
       for(int i = 0; i< 16; i++){
@@ -111,7 +111,7 @@ namespace controllers
         }
       }
 
-      std::cout << "Pose: " << std::endl;
+      std::cout << "\n Pose: " << std::endl;
       for(int i = 0; i< 16; i++)
         std::cout << pose_[i] << " ";
 
@@ -119,23 +119,37 @@ namespace controllers
       for(int i = 0; i< 16; i++)
         std::cout << initial_pose_[i] << " ";
 
-      std::cout << "\n Matrice di rotazione letta nell'update():";
-      for(int i = 0; i < 3 ; i++ ){
-                  for(int j = 0 ; j<3 ; j++)
-                      std::cout << R[i][j] << " ";
-                  std::cout << "\n";
-      }
+      // std::cout << "\n Matrice di rotazione letta nell'update():";
+      // for(int i = 0; i < 3 ; i++ ){
+      //             for(int j = 0 ; j<3 ; j++)
+      //                 std::cout << R[i][j] << " ";
+      //             std::cout << "\n";
+      // }
 
 
     }
 
-    std::cout << "\n Pose: " << std::endl;
-      for(int i = 0; i< 16; i++)
-        std::cout << pose_[i] << " ";
-    std::cout << "\n";
+    // std::cout << "\nPose commanded: " << std::endl;
+    //   for(int i = 0; i< 16; i++)
+    //     std::cout << pose_[i] << " ";
 
+    // std::cout << "\n Actual pose: " << std::endl;
+    //   for(int i = 0; i< 16; i++)
+    //   std::cout << actual_pose[i] << " ";
 
-    cartesian_pose_handle_->setCommand(initial_pose_);
+  
+    cartesian_pose_handle_->setCommand(pose_);
+
+    trajectory_msgs::JointTrajectoryPoint msg;
+    last_q_= cartesian_pose_handle_->getRobotState().q_d;
+    last_q_d_= cartesian_pose_handle_->getRobotState().dq_d;
+    for(int i = 0; i < 7; i++){
+      msg.positions.push_back(last_q_[i]);
+      msg.velocities.push_back(last_q_d_[i]);
+    }
+
+    joints_publisher_.publish(msg);
+
 
   }
 

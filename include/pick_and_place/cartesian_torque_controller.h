@@ -17,6 +17,7 @@
 
 
 #include <Eigen/Dense>
+#include <franka_example_controllers/JointTorqueComparison.h>
 #include <franka_hw/franka_cartesian_command_interface.h>
 #include <franka_hw/franka_model_interface.h>
 #include <franka_hw/trigger_rate.h>
@@ -33,22 +34,35 @@ class CartesianTorqueController : public controller_interface::MultiInterfaceCon
   void update(const ros::Time&, const ros::Duration& period) override;
 
  private:
-  
+  // Saturation
+  std::array<double, 7> saturateTorqueRate(
+      const std::array<double, 7>& tau_d_calculated,
+      const std::array<double, 7>& tau_J_d);  // NOLINT (readability-identifier-naming)
+
+
   std::unique_ptr<franka_hw::FrankaCartesianPoseHandle> cartesian_pose_handle_;
   std::unique_ptr<franka_hw::FrankaModelHandle> model_handle_;
   std::vector<hardware_interface::JointHandle> joint_handles_;
 
-
-  std::array<double, 16> initial_pose_;
+  double coriolis_factor_{1.0};
+  static constexpr double kDeltaTauMax{1.0};
+  std::array<double, 16> initial_pose_{};
+  std::array<double, 16> pose_{};
   franka_hw::TriggerRate rate_trigger_{1.0};
 
   Eigen::Vector3d position_d_;
   Eigen::Quaterniond orientation_d_;
 
+  std::vector<double> k_gains_;
+  std::vector<double> d_gains_;
+  std::array<double, 7> dq_filtered_;
+ 
+
   ros::Subscriber sub_cartesian_trajectory_;
   void CartesianTrajectoryCB(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg);
 
-  
+  std::array<double, 7> last_tau_d_{};
+  realtime_tools::RealtimePublisher<franka_example_controllers::JointTorqueComparison> torques_publisher_;
 };
 
 }  // namespace controllers

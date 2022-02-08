@@ -14,7 +14,7 @@
     </description>
     </class>
 
-    <class name="pick_and_place/CartesianImpedanceController" type="controllers::CartesianImpedanceController" base_class_type="controller_interface::ControllerBase">
+    <class name="controllers/CartesianImpedanceController" type="controllers::CartesianImpedanceController" base_class_type="controller_interface::ControllerBase">
     <description>
         Controller che segue una traiettoria in cartesiano.
     </description>
