@@ -13,7 +13,8 @@
 #include <ros/time.h>
 #include <Eigen/Dense>
 
-#include <realtime_tools/realtime_publisher.h>
+
+#include <realtime_tools/realtime_buffer.h>
 
 #include <franka_hw/franka_cartesian_command_interface.h>
 
@@ -41,6 +42,10 @@ class CartesianPoseController
 
   Eigen::Vector3d position_d_;
   Eigen::Quaterniond orientation_d_;
+
+
+  realtime_tools::RealtimeBuffer<std::vector<double>> position_buffer_;
+  realtime_tools::RealtimeBuffer<std::vector<double>> quaternion_buffer_;
 
   ros::Subscriber sub_cartesian_trajectory_;
   void CartesianTrajectoryCB(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg);

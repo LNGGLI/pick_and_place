@@ -14,6 +14,7 @@
 #include <ros/ros.h>
 
 #include <Eigen/Geometry> 
+#include <Eigen/Core>
 #include <sun_math_toolbox/UnitQuaternion.h>
 
 
@@ -58,23 +59,42 @@ namespace controllers
       return false;
     }
 
-    sub_cartesian_trajectory_ = node_handle.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/cartesian_trajectory_command", 10, &CartesianPoseController::CartesianTrajectoryCB, this);
+    sub_cartesian_trajectory_ = node_handle.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/cartesian_trajectory_command", 1, &CartesianPoseController::CartesianTrajectoryCB, this);
+    
+    position_buffer_.writeFromNonRT(std::vector<double>(3, 0.0));
+    quaternion_buffer_.writeFromNonRT(std::vector<double>(4,0.0));
+    
     return true;
-  }
+  } // end init
 
 
   void CartesianPoseController::starting(const ros::Time& /* time */) {
     initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE;
-    elapsed_time_ = ros::Duration(0.0);
-    position_d_ = {initial_pose_[12],initial_pose_[13],initial_pose_[14]};
 
+    Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(cartesian_pose_handle_->getRobotState().O_T_EE.data()));
+    
+    // Posizione iniziale
+    std::vector<double> initial_position{initial_pose_[12],initial_pose_[13],initial_pose_[14]};
+
+    // Quaternione iniziale
+    Eigen::Quaterniond eigen_quat = Eigen::Quaterniond(initial_transform.linear());
+    std::vector<double> initial_quaternion{eigen_quat.x(),eigen_quat.y(),eigen_quat.z(),eigen_quat.w()};
+
+    // Inizializzazione dei buffer
+    position_buffer_.initRT(initial_position);
+    quaternion_buffer_.initRT(initial_position);
+
+    elapsed_time_ = ros::Duration(0.0);
   }
 
 
 
   void CartesianPoseController::update(const ros::Time & /* time */, const ros::Duration &period)
   {
-    // Eigen::Matrix3d R = orientation_d_.toRotationMatrix(); Da un valore sbagliato
+    // Eigen::Matrix3d R = orientation_d_.toRotationMatrix(); Dà un valore sbagliato
+    std::vector<double> & position = *position_buffer_.readFromRT();
+    std::vector<double> & quaternion = *quaternion_buffer_.readFromRT();
+
     pose_ = initial_pose_;
     
     // TooN::Vector<4> quat = TooN::makeVector(orientation_d_.x(),orientation_d_.y(),orientation_d_.z(),orientation_d_.w());
@@ -91,11 +111,12 @@ namespace controllers
     // pose_[9] = R[1][2];
     // pose_[10] = R[2][2];
     
-    pose_[12] = position_d_[0]; // x
-    pose_[13] = position_d_[1]; // y
-    pose_[14] = position_d_[2]; // z
+    pose_[12] = position[0]; // x
+    pose_[13] = position[1]; // y
+    pose_[14] = position[2]; // z
 
     //Stampa solo la prima volta
+
     if(start){
       start = false;
       for(int i = 0; i< 16; i++){
@@ -123,22 +144,22 @@ namespace controllers
 
     }
 
-  
     cartesian_pose_handle_->setCommand(pose_);
-
-    trajectory_msgs::JointTrajectoryPoint msg;
- 
-
 
   }
 
   void CartesianPoseController::CartesianTrajectoryCB(
     const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg)
     {
+
+        
+
         // Comando in posizione
         position_d_ << msg->transforms[0].translation.x,
                        msg->transforms[0].translation.y,
                        msg->transforms[0].translation.z;
+
+        position_buffer_.writeFromNonRT({position_d_(0),position_d_(1),position_d_(2)});
 
         Eigen::Quaterniond last_orientation_d(orientation_d_);
 
@@ -151,6 +172,7 @@ namespace controllers
         if (last_orientation_d.coeffs().dot(orientation_d_.coeffs()) < 0.0)
           orientation_d_.coeffs() << -orientation_d_.coeffs();
         
+        quaternion_buffer_.writeFromNonRT({orientation_d_.x(),orientation_d_.y(),orientation_d_.z(),orientation_d_.w()});
         
     }
 } // namespace controllers

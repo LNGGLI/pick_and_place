@@ -33,8 +33,17 @@ int main(int argc, char **argv)
 
     ros::init(argc, argv, "trajectory_node");
     ros::NodeHandle nh;
+
+    {
+    if (!check_realtime()) 
+      throw std::runtime_error("REALTIME NOT AVAILABLE");
+
+    if (!set_realtime_SCHED_FIFO()) 
+        throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
+    }
+
     ros::Publisher command_pb = nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(
-        "/cartesian_trajectory_command", 10);
+        "/cartesian_trajectory_command", 1);
 
     ros::Subscriber pose_sub = nh.subscribe<franka_msgs::FrankaState>(
         "/franka_state_controller/franka_states", 1, stateCB);
@@ -71,13 +80,7 @@ int main(int argc, char **argv)
     sun::Cartesian_Independent_Traj cartesian_traj(line_traj, quat_traj);
 
     // Accensione del controller
-    {
-    if (!check_realtime()) 
-      throw std::runtime_error("REALTIME NOT AVAILABLE");
-
-    if (!set_realtime_SCHED_FIFO()) 
-        throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
-    }
+    
 
     bool ok = switch_controller("cartesian_pose_controller", "");
 
@@ -140,7 +143,7 @@ int main(int argc, char **argv)
         // inizialmente vuoti.
         msg.transforms.resize(1);
         msg.velocities.resize(1);
-
+        msg.time_from_start = ros::Duration(t);
         // Comando in posizione
         TooN::Vector<3, double> posizione = cartesian_traj.getPosition(t);
         msg.transforms[0].translation.x = posizione[0];
