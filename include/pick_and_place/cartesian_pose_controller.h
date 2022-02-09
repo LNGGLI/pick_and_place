@@ -47,7 +47,8 @@ class CartesianPoseController
   Eigen::Vector3d position_d_;
   Eigen::Quaterniond orientation_d_;
 
-  sun::Line_Segment_Traj line_traj_;
+  sun::Cartesian_Independent_Traj* cartesian_traj_;
+  ros::Publisher command_pb;
 
 };
 

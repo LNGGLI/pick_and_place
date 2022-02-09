@@ -62,23 +62,30 @@ namespace controllers
       return false;
     }
 
+
+    command_pb = node_handle.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(
+        "/cartesian_trajectory_command_internal", 1);
+
     return true;
   }
 
   void CartesianPoseController::starting(const ros::Time & /* time */)
   {
     initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE;
-    pose_ = initial_pose_;
     double Tf = 10;
 
     elapsed_time_ = ros::Duration(0.0);
     TooN::Vector<3> position_d_ = TooN::makeVector(initial_pose_[12], initial_pose_[13], initial_pose_[14]);
 
     TooN::Vector<3, double> pf({0.3, 0.3, 0.3});
-    
-    sun::Quintic_Poly_Traj qp(Tf, 0, 1); // polinomio quintico utilizzato sia per line_traj che theta_traj
+    TooN::Vector<3, double> axis({0, 0, 1});
+    sun::UnitQuaternion init_quat(TooN::Vector<3>(TooN::makeVector(0,0,0)),1);
 
-    sun::Line_Segment_Traj line_traj_(position_d_, pf, qp);
+    sun::Quintic_Poly_Traj qp(Tf, 0, 1); 
+    sun::Line_Segment_Traj line_traj(position_d_, pf, qp);
+    sun::Rotation_Const_Axis_Traj quat_traj(init_quat, axis, qp);
+    sun::Cartesian_Independent_Traj local_traj(line_traj, quat_traj);
+    cartesian_traj_ = local_traj.clone();
   }
 
   void CartesianPoseController::update(const ros::Time & /* time */, const ros::Duration &period)
@@ -86,10 +93,17 @@ namespace controllers
     // Eigen::Matrix3d R = orientation_d_.toRotationMatrix(); Da un valore sbagliato
     pose_ = initial_pose_;
     elapsed_time_ += period;
-    pose_[12] = line_traj_.getPosition(elapsed_time_.toSec())[0]; // x
-    pose_[13] = line_traj_.getPosition(elapsed_time_.toSec())[1]; // y
-    pose_[14] = line_traj_.getPosition(elapsed_time_.toSec())[2]; // z
+    pose_[12] = cartesian_traj_->getPosition(elapsed_time_.toSec())[0]; // x
+    pose_[13] = cartesian_traj_->getPosition(elapsed_time_.toSec())[1]; // y
+    pose_[14] = cartesian_traj_->getPosition(elapsed_time_.toSec())[2]; // z
 
+    trajectory_msgs::MultiDOFJointTrajectoryPoint msg;
+    msg.transforms.resize(1);
+    msg.transforms[0].translation.x = pose_[12];
+    msg.transforms[0].translation.y = pose_[13];
+    msg.transforms[0].translation.z = pose_[14];
+    command_pb.publish(msg);
+    
     cartesian_pose_handle_->setCommand(pose_);
   }
 

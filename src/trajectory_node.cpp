@@ -23,7 +23,7 @@
 #include <franka_msgs/FrankaState.h>
 
 /* rosbag record /jointsIK /cartesian_trajectory_command
- /franka_statcontroller/joint_states_desired 
+ /franka_state_controller/joint_states_desired 
  /franka_state_controller/franka_states*/
 
 using namespace trajectory;
