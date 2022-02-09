@@ -45,10 +45,6 @@ class CartesianPoseController
   ros::Subscriber sub_cartesian_trajectory_;
   void CartesianTrajectoryCB(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg);
   
-  std::array<double, 7> last_q_{};
-  std::array<double, 7> last_q_d_{};
-  ros::Publisher joints_publisher_;
-
 };
 
 }  // namespace controllers

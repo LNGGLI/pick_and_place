@@ -59,16 +59,12 @@ namespace controllers
     }
 
     sub_cartesian_trajectory_ = node_handle.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/cartesian_trajectory_command", 10, &CartesianPoseController::CartesianTrajectoryCB, this);
-
-    joints_publisher_ = node_handle.advertise<trajectory_msgs::JointTrajectoryPoint>("/jointsIK", 1);
-
     return true;
   }
 
 
   void CartesianPoseController::starting(const ros::Time& /* time */) {
     initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE;
-    pose_ = initial_pose_;
     elapsed_time_ = ros::Duration(0.0);
     position_d_ = {initial_pose_[12],initial_pose_[13],initial_pose_[14]};
 
@@ -85,7 +81,6 @@ namespace controllers
     // sun::UnitQuaternion unit_quat(quat);
     // TooN::Matrix<3> R = unit_quat.R();
     
-
     // pose_[0] = R[0][0];
     // pose_[1] = R[1][0];
     // pose_[2] = R[2][0];
@@ -95,7 +90,6 @@ namespace controllers
     // pose_[8] = R[0][2];
     // pose_[9] = R[1][2];
     // pose_[10] = R[2][2];
-
     
     pose_[12] = position_d_[0]; // x
     pose_[13] = position_d_[1]; // y
@@ -133,14 +127,7 @@ namespace controllers
     cartesian_pose_handle_->setCommand(pose_);
 
     trajectory_msgs::JointTrajectoryPoint msg;
-    last_q_= cartesian_pose_handle_->getRobotState().q_d;
-    last_q_d_= cartesian_pose_handle_->getRobotState().dq_d;
-    for(int i = 0; i < 7; i++){
-      msg.positions.push_back(last_q_[i]);
-      msg.velocities.push_back(last_q_d_[i]);
-    }
-
-    joints_publisher_.publish(msg);
+ 
 
 
   }
