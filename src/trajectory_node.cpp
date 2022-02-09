@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     ros::Subscriber pose_sub = nh.subscribe<franka_msgs::FrankaState>(
         "/franka_state_controller/franka_states", 1, stateCB);
 
-
+    
     while (!initial_read)
     {
         ros::spinOnce();
@@ -93,8 +93,8 @@ int main(int argc, char **argv)
     
     double begin = ros::Time::now().toSec();
     double t;
-
-    ros::Rate loop_rate(1000); // 1kHz
+    double T = 0.003; // periodo
+    ros::Rate loop_rate(1.0/T); // Hz
 
     std::cout << "Resta fermo per 2 secondi" << std::endl;
     while (t < 2)  
