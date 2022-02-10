@@ -68,6 +68,7 @@
   <depend>dynamic_reconfigure</depend>
   <depend>sun_traj_lib</depend>
   <depend>ros_toon</depend>
+  <depend>sun_robot_lib</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
 

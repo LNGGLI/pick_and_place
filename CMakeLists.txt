@@ -31,7 +31,7 @@ roscpp
 rospy
 sun_traj_lib
 ros_toon
-
+sun_robot_lib
 )
 
 find_package(Eigen3 REQUIRED)
@@ -156,6 +156,8 @@ src/cartesian_torque_controller.cpp
 src/cartesian_impedance_controller.cpp
 src/cartesian_pose_controller.cpp
 )
+add_library(panda 
+src/Panda.cpp)
 
 target_link_libraries(controllers 
  ${catkin_LIBRARIES} 
@@ -201,6 +203,7 @@ add_executable(trajectory_node src/trajectory_node.cpp)
 
  target_link_libraries(trajectory_node
   ${catkin_LIBRARIES}
+  panda
  )
 
 #############

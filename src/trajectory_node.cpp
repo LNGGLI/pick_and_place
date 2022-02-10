@@ -4,22 +4,28 @@
 #include <stdexcept>
 #include <string>
 
+#include <pick_and_place/trajectory_node.h>
+#include <pick_and_place/Panda.h>
+
 // Server , Actions
 #include <actionlib/client/simple_action_client.h>
 
 // Utils
 #include <ros/ros.h>
 #include <franka_gripper/franka_gripper.h>
-
-#include <pick_and_place/trajectory_node.h>
 #include <pick_and_place/check_realtime.h>
+#include <TooN/TooN.h>
+
+
+// Sun
+#include <sun_robot_lib/Robot.h>
 #include <sun_traj_lib/Cartesian_Independent_Traj.h>
 #include <sun_traj_lib/Quintic_Poly_Traj.h>
 #include <sun_traj_lib/Line_Segment_Traj.h>
 #include <sun_traj_lib/Rotation_Const_Axis_Traj.h>
 
 // Messages
-#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
+#include <trajectory_msgs/JointTrajectoryPoint.h>
 #include <franka_msgs/FrankaState.h>
 
 /* rosbag record /jointsIK /cartesian_trajectory_command
@@ -33,6 +39,7 @@ int main(int argc, char **argv)
 
     ros::init(argc, argv, "trajectory_node");
     ros::NodeHandle nh;
+    
 
     {
     if (!check_realtime()) 
@@ -42,8 +49,8 @@ int main(int argc, char **argv)
         throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
     }
 
-    ros::Publisher command_pb = nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(
-        "/cartesian_trajectory_command", 1);
+    ros::Publisher command_pb = nh.advertise<trajectory_msgs::JointTrajectoryPoint>(
+        "joint_commands", 1);
 
     ros::Subscriber pose_sub = nh.subscribe<franka_msgs::FrankaState>(
         "/franka_state_controller/franka_states", 1, stateCB);
@@ -59,6 +66,13 @@ int main(int argc, char **argv)
     std::cout << "Configurazione iniziale (initial_transform) acquisita. \n";
 
     // initial_transform è una Toon::SE3
+    TooN::Matrix<4,4,double> n_T_e (TooN::Data(0.7071, 0.7071,   0.0, 0.0,
+                                                -0.7071,  0.7071,  0.0, 0.0,
+                                                0.0,   0.0,    1.0, 0.1034,
+                                                0.0,   0.0,    0.0, 1.0));
+
+    sun::Panda panda(n_T_e,10.0,"panda");
+    
 
     TooN::Vector<3> pi = initial_transform.get_translation();                     // initial_position
 
@@ -90,105 +104,55 @@ int main(int argc, char **argv)
         std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
 
     
-    
+    double fs = 1000; // frequenza
+    double Ts = 1/fs;
+
+    ros::Rate loop_rate(fs); // Hz
     double begin = ros::Time::now().toSec();
     double t;
-    double T = 0.003; // periodo
-    ros::Rate loop_rate(1.0/T); // Hz
-
-    std::cout << "Resta fermo per 2 secondi" << std::endl;
-    while (t < 2)  
-    {
-
-        t = ros::Time::now().toSec() - begin; // tempo trascorso
-
-        trajectory_msgs::MultiDOFJointTrajectoryPoint msg;
-        // Solo dopo resize si puo' indicizzare transforms[0] e velocity[0] poichè sono
-        // inizialmente vuoti.
-        msg.transforms.resize(1);
-        msg.velocities.resize(1);
-        msg.time_from_start = ros::Duration(t);
-        // Comando in posizione
-        TooN::Vector<3, double> posizione = cartesian_traj.getPosition(0.0);
-        msg.transforms[0].translation.x = posizione[0];
-        msg.transforms[0].translation.y = posizione[1];
-        msg.transforms[0].translation.z = posizione[2];
-
-        // Comando in orientamento
-        sun::UnitQuaternion unit_quat = cartesian_traj.getQuaternion(0.0);
-        msg.transforms[0].rotation.x = unit_quat.getS();
-        TooN::Vector<3, double> vec_quat = unit_quat.getV();
-        msg.transforms[0].rotation.y = vec_quat[0];
-        msg.transforms[0].rotation.z = vec_quat[1];
-        msg.transforms[0].rotation.w = vec_quat[2];
-
-
-
-        command_pb.publish(msg);
-
-        loop_rate.sleep();
-    }
+    
 
     std:: cout << "Inizia moto " << std::endl;
-    
+    double gain = 0.5*fs;
+    TooN::Vector<> qdot = TooN::Zeros(7); // velocità di giunto ritorno
+    TooN::Vector<6,int> mask = TooN::Ones; // maschera, se l'i-esimo elemento è zero allora l'i-esima componente cartesiana non verrà usata per il calcolo dell'errore
+    TooN::Vector<3> xd = TooN::Zeros; // velocità in translazione desiderata
+    TooN::Vector<3> w = TooN::Zeros; // velocità angolare desiderata
+    TooN::Vector<6> error = TooN::Ones; // questo va "resettato" ogni volta prima del clik
+    TooN::Vector<7> qDH_k;
+    sun::UnitQuaternion oldQ = init_quat;
+
+
     begin = ros::Time::now().toSec();
     bool start = true;
+
+
     while (ros::ok() && !cartesian_traj.isCompleate(t))  
     {
 
         t = ros::Time::now().toSec() - begin; // tempo trascorso
+        TooN::Vector<3,double> posizione_d = cartesian_traj.getPosition(t);
+        sun::UnitQuaternion unit_quat_d = cartesian_traj.getQuaternion(0.0);
 
-        trajectory_msgs::MultiDOFJointTrajectoryPoint msg;
-        // Solo dopo resize si puo' indicizzare transforms[0] e velocity[0] poichè sono
-        // inizialmente vuoti.
-        msg.transforms.resize(1);
-        msg.velocities.resize(1);
-        msg.time_from_start = ros::Duration(t);
-        // Comando in posizione
-        TooN::Vector<3, double> posizione = cartesian_traj.getPosition(t);
-        msg.transforms[0].translation.x = posizione[0];
-        msg.transforms[0].translation.y = posizione[1];
-        msg.transforms[0].translation.z = posizione[2];
+         qDH_k = panda.clik(qDH_k,
+                            posizione_d,
+                            unit_quat_d,
+                            oldQ,
+                            xd,
+                            w,
+                            mask,
+                            gain,
+                            Ts,
+                            0.0,
+                            TooN::Zeros(panda.getNumJoints()),
+                            qdot,
+                            error,
+                            oldQ);
 
-        // std::cout << "Posizione traiettoria: \n"
-        //           << "x:" <<  posizione[0] << "\n"
-        //           << "y:" <<  posizione[1] << "\n"
-        //           << "z:" <<  posizione[2] << "\n";
-
-        // Comando in velocità lineare
-        TooN::Vector<3, double> velocita_lineare = cartesian_traj.getLinearVelocity(t);
-        msg.velocities[0].linear.x = velocita_lineare[0];
-        msg.velocities[0].linear.y = velocita_lineare[1];
-        msg.velocities[0].linear.z = velocita_lineare[2];
-
-        // Comando in orientamento
-        sun::UnitQuaternion unit_quat = cartesian_traj.getQuaternion(t);
-        msg.transforms[0].rotation.x = unit_quat.getS();
-        TooN::Vector<3, double> vec_quat = unit_quat.getV();
-        msg.transforms[0].rotation.y = vec_quat[0];
-        msg.transforms[0].rotation.z = vec_quat[1];
-        msg.transforms[0].rotation.w = vec_quat[2];
-
-
-        // if(start){
-        //     start = false;
-        //     TooN::Matrix<3> R = unit_quat.R();
-        //     std::cout << "Matrice di rotazione inviata: \n";
-        //     for(int i = 0; i < 3 ; i++ ){
-        //         for(int j = 0 ; j<3 ; j++)
-        //             std::cout << R[i][j] << " ";
-        //         std::cout << "\n";
-        //     }
-        // }
-       
-
-        // Comando in velocità angolare
-        TooN::Vector<3, double> velocita_angolare = cartesian_traj.getAngularVelocity(t);
-        msg.velocities[0].angular.x = velocita_angolare[0];
-        msg.velocities[0].angular.x = velocita_angolare[1];
-        msg.velocities[0].angular.x = velocita_angolare[2];
-
-        command_pb.publish(msg);
+        
+        trajectory_msgs::JointTrajectoryPoint command_msg;
+        
+        command_pb.publish(command_msg);
 
         loop_rate.sleep();
     }
