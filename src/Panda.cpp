@@ -79,7 +79,7 @@ Panda::Panda(const Matrix<4, 4>& n_T_e, double dls_joint_speed_saturation, const
       // a,alpha,d,
       -0.0825, -M_PI / 2.0, 0.0,
       // robot2dh_offset, bool robot2dh_flip
-      0.0, true,
+      0.0, false,
       // Joint_Hard_limit_lower, Joint_Hard_limit_higher
       -3.0718, -0.0698,
       // hard_velocity_limit

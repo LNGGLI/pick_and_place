@@ -27,6 +27,7 @@
 // Messages
 #include <trajectory_msgs/JointTrajectoryPoint.h>
 #include <franka_msgs/FrankaState.h>
+#include <geometry_msgs/Pose.h>
 
 /* rosbag record /jointsIK /cartesian_trajectory_command
  /franka_statcontroller/joint_states_desired 
@@ -50,10 +51,13 @@ int main(int argc, char **argv)
     }
 
     ros::Publisher command_pb = nh.advertise<trajectory_msgs::JointTrajectoryPoint>(
-        "joint_commands", 1);
+        "/joint_commands", 1);
+
+    ros::Publisher error_pb = nh.advertise<geometry_msgs::Pose>("errors", 1);
 
     ros::Subscriber pose_sub = nh.subscribe<franka_msgs::FrankaState>(
         "/franka_state_controller/franka_states", 1, stateCB);
+
 
     
     while (!initial_read)
@@ -63,7 +67,7 @@ int main(int argc, char **argv)
         std::cout << "In attesa di leggere la posa iniziale\n";
     }
 
-    std::cout << "Configurazione iniziale (initial_transform) acquisita. \n";
+    std::cout << "Configurazione iniziale (initial_transform e initial_config) acquisita. \n";
 
     // initial_transform è una Toon::SE3
     TooN::Matrix<4,4,double> n_T_e (TooN::Data(0.7071, 0.7071,   0.0, 0.0,
@@ -96,7 +100,7 @@ int main(int argc, char **argv)
     // Accensione del controller
     
 
-    bool ok = switch_controller("cartesian_pose_controller", "");
+    bool ok = switch_controller("pick_and_place_controller", "");
 
     if (ok)
         std::cout << "Lo switch del controller è stato effettuato!" << std::endl;
@@ -113,48 +117,74 @@ int main(int argc, char **argv)
     
 
     std:: cout << "Inizia moto " << std::endl;
+
     double gain = 0.5*fs;
     TooN::Vector<> qdot = TooN::Zeros(7); // velocità di giunto ritorno
     TooN::Vector<6,int> mask = TooN::Ones; // maschera, se l'i-esimo elemento è zero allora l'i-esima componente cartesiana non verrà usata per il calcolo dell'errore
     TooN::Vector<3> xd = TooN::Zeros; // velocità in translazione desiderata
     TooN::Vector<3> w = TooN::Zeros; // velocità angolare desiderata
     TooN::Vector<6> error = TooN::Ones; // questo va "resettato" ogni volta prima del clik
-    TooN::Vector<7> qDH_k;
+    TooN::Vector<7> qDH_k = initial_conf;
     sun::UnitQuaternion oldQ = init_quat;
 
+    sun::UnitQuaternion unit_quat_d = init_quat;
+    TooN::Vector<3,double> posizione_d = pi;
 
     begin = ros::Time::now().toSec();
     bool start = true;
 
 
-    while (ros::ok() && !cartesian_traj.isCompleate(t))  
+    while (ros::ok() )  // && !cartesian_traj.isCompleate(t)
     {
 
         t = ros::Time::now().toSec() - begin; // tempo trascorso
-        TooN::Vector<3,double> posizione_d = cartesian_traj.getPosition(t);
-        sun::UnitQuaternion unit_quat_d = cartesian_traj.getQuaternion(0.0);
+        posizione_d = cartesian_traj.getPosition(t);
+        unit_quat_d= cartesian_traj.getQuaternion(0);
+        xd = cartesian_traj.getLinearVelocity(t);
+        // w = cartesian_traj.getAngularVelocity(t);
 
-         qDH_k = panda.clik(qDH_k,
-                            posizione_d,
-                            unit_quat_d,
-                            oldQ,
-                            xd,
-                            w,
-                            mask,
-                            gain,
-                            Ts,
-                            0.0,
+        qDH_k = panda.clik(qDH_k, //<- qDH attuale
+                            posizione_d, // <- posizione desiderata
+                            unit_quat_d, // <- quaternione desiderato
+                            oldQ, // <- quaternione al passo precedente (per garantire la continuità)
+                            xd, // <- velocità in translazione desiderata
+                            w, //<- velocità angolare desiderata
+                            mask,// <- maschera, se l'i-esimo elemento è zero allora l'i-esima componente cartesiana non verrà usata per il calcolo dell'errore
+                            gain,// <- guadagno del clik
+                            Ts,// <- Ts, tempo di campionamento
+                            0.0, // <- quadagno obj secondario
                             TooN::Zeros(panda.getNumJoints()),
-                            qdot,
-                            error,
-                            oldQ);
+                            
+                            //Return Vars
+                            qdot,// <- variabile di ritorno velocità di giunto
+                            error, //<- variabile di ritorno errore
+                            oldQ // <- variabile di ritorno: Quaternione attuale (N.B. qui uso oldQ in modo da aggiornare direttamente la variabile oldQ e averla già pronta per la prossima iterazione)
+                        );
 
-        
+        bool limits_exceeded = panda.exceededHardJointLimits(panda.joints_DH2Robot(qDH_k));
         trajectory_msgs::JointTrajectoryPoint command_msg;
+        geometry_msgs::Pose error_msg;
+
+        if(!limits_exceeded){
+        for(int i = 0; i< 7; i++)
+            command_msg.positions.push_back(qDH_k[i]);
+        }
+        else 
+            throw std::runtime_error("Limiti di giunto superati");
+        error_msg.position.x = error[0];
+        error_msg.position.y = error[1];
+        error_msg.position.z = error[2];
+
+        error_msg.orientation.x = error[3];
+        error_msg.orientation.y = error[4];
+        error_msg.orientation.z = error[5];
+
         
         command_pb.publish(command_msg);
+        error_pb.publish(error_msg);
 
         loop_rate.sleep();
+
     }
 
     return 0;

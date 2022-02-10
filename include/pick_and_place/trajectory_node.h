@@ -24,7 +24,7 @@ namespace trajectory{
 
    
     TooN::SE3<double> initial_transform;
-    
+    TooN::Vector<7,double> initial_conf; 
 
     bool initial_read = false;
     double Tf = 20;
@@ -63,7 +63,7 @@ namespace trajectory{
 
         std::array<double,16> transform;
         for(int i = 0; i < 16 ; i++)
-            transform[i]= msg->O_T_EE_c[i]; // ATTENZIONE la O_T_EE è passata per colonne!
+            transform[i]= msg->O_T_EE[i]; // ATTENZIONE la O_T_EE è passata per colonne!
         
         double R_array[9] = {transform[0],transform[1],transform[2],
                             transform[4],transform[5],transform[6],
@@ -99,6 +99,10 @@ namespace trajectory{
             std::cout << std::endl;
         }
         std::cout << "\n";
+
+        for(int i = 0; i < 7; i++)
+            initial_conf[i] = msg->q[i];
+
     }
 
 

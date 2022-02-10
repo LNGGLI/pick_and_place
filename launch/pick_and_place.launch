@@ -13,8 +13,8 @@
   <rosparam command="load" file="$(find pick_and_place)/config/controller.yaml" />
   
   <!-- Load dei controller -->
-  <node name="pose_controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="--stopped cartesian_pose_controller"/>
-    
+  
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="pick_and_place_controller"/>
   
   <!-- Run del planner -->
   
