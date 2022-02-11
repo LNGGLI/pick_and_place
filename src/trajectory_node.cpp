@@ -83,14 +83,6 @@ int main(int argc, char **argv)
     sun::Panda panda(n_T_e,10.0,"panda");
     panda.display();
     TooN::Matrix<4,4,double> initial_pose = panda.fkine(initial_conf);
-
-    std::cout << "\n Fkine panda object: \n ";
-    for(int i = 0; i < 4;i++){
-        for(int j = 0; j < 4; j++){
-            std::cout << initial_pose[i][j] << " ";
-        }
-        std::cout << std::endl;
-    }
     
      
     TooN::Vector<3> pi = TooN::makeVector(initial_pose[0][3],initial_pose[1][3],initial_pose[2][3]);//initial_transform.get_translation();                     // initial_position
@@ -115,16 +107,17 @@ int main(int argc, char **argv)
     // Accensione del controller
     
 
-    // bool ok = switch_controller("pick_and_place_controller", "");
+    bool ok = switch_controller("pick_and_place_controller", "");
 
-    // if (ok)
-    //     std::cout << "Lo switch del controller è stato effettuato!" << std::endl;
-    // else
-    //     std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
+    if (ok)
+        std::cout << "Lo switch del controller è stato effettuato!" << std::endl;
+    else
+        std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
 
     
-    double fs = 1000; // frequenza
-    double Ts = 1/fs;
+    double Ts = 0.035; // periodo
+    double fs = 1/Ts; // frequenza
+    
 
     ros::Rate loop_rate(fs); // Hz
     double begin = ros::Time::now().toSec();

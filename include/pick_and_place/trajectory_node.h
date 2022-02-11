@@ -26,7 +26,7 @@ namespace trajectory{
     TooN::Vector<7,double> initial_conf; 
 
     bool initial_read = false;
-    double Tf = 10;
+    double Tf = 15;
 
     bool switch_controller(const std::string& start_controller, const std::string& stop_controller){
 
@@ -94,7 +94,7 @@ namespace trajectory{
             std::cout << initial_conf[i] << " ";
 
         std::cout << "\n";
-        
+
         initial_read = true;
     }
 
