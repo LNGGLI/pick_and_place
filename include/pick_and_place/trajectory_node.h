@@ -60,44 +60,31 @@ namespace trajectory{
 
     void stateCB(const franka_msgs::FrankaState::ConstPtr& msg){
 
-        std::array<double,16> transform;
+        double transform[16];
         for(int i = 0; i < 16 ; i++)
             transform[i]= msg->O_T_EE[i]; // ATTENZIONE la O_T_EE è passata per colonne!
-        
-        double R_array[9] = {transform[0],transform[1],transform[2],
-                            transform[4],transform[5],transform[6],
-                            transform[8],transform[9],transform[10]};
+       
 
-        // Posizione 
-        TooN::Vector<3,double> p({transform[12],transform[13],transform[14]});
-
-        // Matrice di rotazione CONTROLLARE
-        TooN::Matrix<3,3> R;
-        for(int j = 0; j < 3;j++)
-            for(int i = 0; i < 3; i++)
-                R(i,j)=R_array[i+j*3];  
-
-        TooN::SO3<double> R_so3(R);
-        
-        // Costruzione matrice di trasformazione omogenea
-        initial_transform = TooN::SE3<double>(R_so3,p);
-        
-        initial_read = true;
-
-        // Stampa posizione e matrice di rotazione
-        
-        std::cout << "Posizione iniziale: \n"
-                  << "x:" <<  initial_transform.get_translation()[0] << "\n"
-                  << "y:" <<  initial_transform.get_translation()[1] << "\n"
-                  << "z:" <<  initial_transform.get_translation()[2] << "\n";
-
-        std::cout << "Matrice di rotazione iniziale: \n";
-        for(int i = 0; i < 3;i++){
-            for(int j = 0; j < 3; j++)
-                std::cout << R(i,j) << " ";
+        // Stampa matrice di transformazione
+        std::cout << "Matrice di trasformazione iniziale: \n";
+        TooN::Matrix<4,4,double> posa;
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                posa[j][i] = transform[j+4*i];
+            }
             std::cout << std::endl;
         }
-        std::cout << "\n";
+
+         for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                std::cout << posa[i][j] << " ";
+            }
+            std::cout << std::endl;
+        }
 
         for(int i = 0; i < 7; i++)
             initial_conf[i] = msg->q[i];
@@ -105,6 +92,10 @@ namespace trajectory{
         std::cout << "Configurazione iniziale q0:  \n";
         for(int i = 0; i < 7; i++)
             std::cout << initial_conf[i] << " ";
+
+        std::cout << "\n";
+        
+        initial_read = true;
     }
 
 

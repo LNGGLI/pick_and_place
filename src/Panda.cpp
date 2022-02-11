@@ -34,7 +34,7 @@ namespace sun
     Full constructor
 */
 Panda::Panda(const Matrix<4, 4>& n_T_e, double dls_joint_speed_saturation, const string& name)
-  : Robot(transl(0.0, 0.0, 0.340), n_T_e, dls_joint_speed_saturation, name)
+  : Robot(transl(0.0, 0.0, 0.0), n_T_e, dls_joint_speed_saturation, name)
 {
   _model = PANDA_MODEL_STR;
   // L1

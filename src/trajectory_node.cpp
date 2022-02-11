@@ -80,8 +80,19 @@ int main(int argc, char **argv)
                                                 0.0,   0.0,    1.0, 0.1034,
                                                 0.0,   0.0,    0.0, 1.0));
 
-    sun::Panda panda(n_T_e,100000.0,"panda");
+    sun::Panda panda(n_T_e,10.0,"panda");
+    panda.display();
     TooN::Matrix<4,4,double> initial_pose = panda.fkine(initial_conf);
+
+    std::cout << "\n Fkine panda object: \n ";
+    for(int i = 0; i < 4;i++){
+        for(int j = 0; j < 4; j++){
+            std::cout << initial_pose[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+    
+     
     TooN::Vector<3> pi = TooN::makeVector(initial_pose[0][3],initial_pose[1][3],initial_pose[2][3]);//initial_transform.get_translation();                     // initial_position
 
     sun::UnitQuaternion init_quat(initial_pose);// initial_transform.get_rotation().get_matrix()); // initial orientation
@@ -91,7 +102,7 @@ int main(int argc, char **argv)
     // Generazione della traiettoria su primitiva di percorso di tipo segmento:
 
     // TODO: scegliere punto finale
-    TooN::Vector<3, double> pf({0.3, 0.3, 0.3});
+    TooN::Vector<3, double> pf({0.3, 0.3, 0.5});
     TooN::Vector<3, double> axis({0, 0, 1});
     
     sun::Quintic_Poly_Traj qp(Tf, 0, 1); // polinomio quintico utilizzato sia per line_traj che theta_traj
