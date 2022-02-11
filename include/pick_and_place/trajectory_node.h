@@ -19,7 +19,6 @@
 using controller_manager_msgs::SwitchControllerRequest;
 using controller_manager_msgs::SwitchControllerResponse;
 
-
 namespace trajectory{
 
    
@@ -27,7 +26,7 @@ namespace trajectory{
     TooN::Vector<7,double> initial_conf; 
 
     bool initial_read = false;
-    double Tf = 20;
+    double Tf = 10;
 
     bool switch_controller(const std::string& start_controller, const std::string& stop_controller){
 
@@ -102,7 +101,10 @@ namespace trajectory{
 
         for(int i = 0; i < 7; i++)
             initial_conf[i] = msg->q[i];
-
+        
+        std::cout << "Configurazione iniziale q0:  \n";
+        for(int i = 0; i < 7; i++)
+            std::cout << initial_conf[i] << " ";
     }
 
 

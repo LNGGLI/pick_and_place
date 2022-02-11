@@ -28,10 +28,9 @@
 #include <trajectory_msgs/JointTrajectoryPoint.h>
 #include <franka_msgs/FrankaState.h>
 #include <geometry_msgs/Pose.h>
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 
-/* rosbag record /jointsIK /cartesian_trajectory_command
- /franka_statcontroller/joint_states_desired 
- /franka_state_controller/franka_states*/
+/*rosbag record /fkine /joint_commands /franka_state_controller/franka_states /franka_state_controller/joint_states_desired errors /cartesian_trajectory_command*/
 
 using namespace trajectory;
 
@@ -52,6 +51,12 @@ int main(int argc, char **argv)
 
     ros::Publisher command_pb = nh.advertise<trajectory_msgs::JointTrajectoryPoint>(
         "/joint_commands", 1);
+    
+    ros::Publisher traj_pb = nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(
+        "/cartesian_trajectory_command", 1);
+    
+    ros::Publisher fkine_pb = nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(
+        "/fkine", 1);
 
     ros::Publisher error_pb = nh.advertise<geometry_msgs::Pose>("errors", 1);
 
@@ -64,7 +69,7 @@ int main(int argc, char **argv)
     {
         ros::spinOnce();
         ros::Duration(0.2).sleep();
-        std::cout << "In attesa di leggere la posa iniziale\n";
+        std::cout << "\nIn attesa di leggere la posa iniziale\n";
     }
 
     std::cout << "Configurazione iniziale (initial_transform e initial_config) acquisita. \n";
@@ -75,12 +80,11 @@ int main(int argc, char **argv)
                                                 0.0,   0.0,    1.0, 0.1034,
                                                 0.0,   0.0,    0.0, 1.0));
 
-    sun::Panda panda(n_T_e,10.0,"panda");
-    
+    sun::Panda panda(n_T_e,100000.0,"panda");
+    TooN::Matrix<4,4,double> initial_pose = panda.fkine(initial_conf);
+    TooN::Vector<3> pi = TooN::makeVector(initial_pose[0][3],initial_pose[1][3],initial_pose[2][3]);//initial_transform.get_translation();                     // initial_position
 
-    TooN::Vector<3> pi = initial_transform.get_translation();                     // initial_position
-
-    sun::UnitQuaternion init_quat(initial_transform.get_rotation().get_matrix()); // initial orientation
+    sun::UnitQuaternion init_quat(initial_pose);// initial_transform.get_rotation().get_matrix()); // initial orientation
 
     std::cout << "Generazione della traiettoria in cartesiano \n";
 
@@ -100,12 +104,12 @@ int main(int argc, char **argv)
     // Accensione del controller
     
 
-    bool ok = switch_controller("pick_and_place_controller", "");
+    // bool ok = switch_controller("pick_and_place_controller", "");
 
-    if (ok)
-        std::cout << "Lo switch del controller è stato effettuato!" << std::endl;
-    else
-        std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
+    // if (ok)
+    //     std::cout << "Lo switch del controller è stato effettuato!" << std::endl;
+    // else
+    //     std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
 
     
     double fs = 1000; // frequenza
@@ -134,14 +138,14 @@ int main(int argc, char **argv)
     bool start = true;
 
 
-    while (ros::ok() )  // && !cartesian_traj.isCompleate(t)
+    while (ros::ok())  // && !cartesian_traj.isCompleate(t)
     {
 
         t = ros::Time::now().toSec() - begin; // tempo trascorso
         posizione_d = cartesian_traj.getPosition(t);
-        unit_quat_d= cartesian_traj.getQuaternion(0);
+        unit_quat_d = cartesian_traj.getQuaternion(0);
         xd = cartesian_traj.getLinearVelocity(t);
-        // w = cartesian_traj.getAngularVelocity(t);
+        w = cartesian_traj.getAngularVelocity(0);
 
         qDH_k = panda.clik(qDH_k, //<- qDH attuale
                             posizione_d, // <- posizione desiderata
@@ -160,17 +164,15 @@ int main(int argc, char **argv)
                             error, //<- variabile di ritorno errore
                             oldQ // <- variabile di ritorno: Quaternione attuale (N.B. qui uso oldQ in modo da aggiornare direttamente la variabile oldQ e averla già pronta per la prossima iterazione)
                         );
-
+        
         bool limits_exceeded = panda.exceededHardJointLimits(panda.joints_DH2Robot(qDH_k));
         trajectory_msgs::JointTrajectoryPoint command_msg;
         geometry_msgs::Pose error_msg;
+        trajectory_msgs::MultiDOFJointTrajectoryPoint traj_msg;
+        trajectory_msgs::MultiDOFJointTrajectoryPoint fkine_msg;
 
-        if(!limits_exceeded){
-        for(int i = 0; i< 7; i++)
-            command_msg.positions.push_back(qDH_k[i]);
-        }
-        else 
-            throw std::runtime_error("Limiti di giunto superati");
+        
+        // Pubblicazione errore
         error_msg.position.x = error[0];
         error_msg.position.y = error[1];
         error_msg.position.z = error[2];
@@ -179,9 +181,57 @@ int main(int argc, char **argv)
         error_msg.orientation.y = error[4];
         error_msg.orientation.z = error[5];
 
-        
-        command_pb.publish(command_msg);
         error_pb.publish(error_msg);
+        
+        // Pubblicazione comando in spazio giunti 
+        if(!limits_exceeded){
+        for(int i = 0; i< 7; i++)
+            command_msg.positions.push_back(qDH_k[i]);
+        }
+        else 
+            throw std::runtime_error("Limiti di giunto superati");
+
+        command_pb.publish(command_msg);
+        
+
+        // Pubblicazione comando in cartesiano
+        
+        traj_msg.transforms.resize(1);
+        traj_msg.velocities.resize(1);
+        traj_msg.time_from_start = ros::Duration(t);
+       
+        
+        traj_msg.transforms[0].translation.x = posizione_d[0];
+        traj_msg.transforms[0].translation.y = posizione_d[1];
+        traj_msg.transforms[0].translation.z = posizione_d[2];
+
+        // Comando in orientamento
+        traj_msg.transforms[0].rotation.x = unit_quat_d.getS();
+        TooN::Vector<3, double> vec_quat = unit_quat_d.getV();
+        traj_msg.transforms[0].rotation.y = vec_quat[0];
+        traj_msg.transforms[0].rotation.z = vec_quat[1];
+        traj_msg.transforms[0].rotation.w = vec_quat[2];
+
+        traj_pb.publish(traj_msg);
+
+
+        // Pubblicazione cinematica diretta ottenuta dalla q clik
+        TooN::Matrix<4,4,double> fkine = panda.fkine(qDH_k);
+        fkine_msg.transforms.resize(1);
+        fkine_msg.transforms[0].translation.x = fkine[0][3];
+        fkine_msg.transforms[0].translation.y = fkine[1][3];
+        fkine_msg.transforms[0].translation.z = fkine[2][3];
+
+        sun::UnitQuaternion quat_fkine(fkine); 
+        TooN::Vector<3, double> fkine_vec_quat = quat_fkine.getV();
+        fkine_msg.transforms[0].rotation.x = unit_quat_d.getS();
+        fkine_msg.transforms[0].rotation.y = fkine_vec_quat[0];
+        fkine_msg.transforms[0].rotation.z = fkine_vec_quat[1];
+        fkine_msg.transforms[0].rotation.w = fkine_vec_quat[2];
+
+          
+        fkine_pb.publish(fkine_msg);
+        
 
         loop_rate.sleep();
 

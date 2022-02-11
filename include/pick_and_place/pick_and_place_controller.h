@@ -28,6 +28,7 @@ class PickAndPlaceController : public controller_interface::MultiInterfaceContro
   hardware_interface::PositionJointInterface* position_joint_interface_;
   std::vector<hardware_interface::JointHandle> position_joint_handles_;
   ros::Duration elapsed_time_;
+  
 
   unsigned int n_joints_ = 7;
   realtime_tools::RealtimeBuffer<std::vector<double>> commands_buffer_;
