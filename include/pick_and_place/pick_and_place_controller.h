@@ -31,7 +31,7 @@ class PickAndPlaceController : public controller_interface::MultiInterfaceContro
   
 
   unsigned int n_joints_ = 7;
-  realtime_tools::RealtimeBuffer<std::vector<double>> commands_buffer_;
+  std::array<double,7> command_;
   ros::Subscriber sub_command_;
 
   

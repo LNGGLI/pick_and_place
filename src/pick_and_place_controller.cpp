@@ -46,8 +46,6 @@ bool PickAndPlaceController::init(hardware_interface::RobotHW* robot_hardware,
 
 
   // inizializzazione del buffer realtime e del subscriber
-
-  commands_buffer_.writeFromNonRT(std::vector<double>(n_joints_, 0.0));
   sub_command_ = node_handle.subscribe<trajectory_msgs::JointTrajectoryPoint>("/joint_commands", 1, &PickAndPlaceController::commandCB, this);
   
 
@@ -56,36 +54,29 @@ bool PickAndPlaceController::init(hardware_interface::RobotHW* robot_hardware,
 
 void PickAndPlaceController::starting(const ros::Time& /* time */) {
 
-  std::vector<double> current_positions(n_joints_, 0.0);
-
-    for (std::size_t i = 0; i < n_joints_; ++i)
-    {
-      current_positions[i] = position_joint_handles_[i].getPosition();
-    }
-    commands_buffer_.initRT(current_positions);
-
   elapsed_time_ = ros::Duration(0.0);
 }
 
-void PickAndPlaceController::update(const ros::Time& /*time*/,
+void PickAndPlaceController::update(const ros::Time& time,
                                             const ros::Duration& period) {
-
-  std::vector<double> & commands = *commands_buffer_.readFromRT();
-  
   for(int i = 0;i<7;i++){
-    position_joint_handles_[i].setCommand(commands[i]);
+    position_joint_handles_[i].setCommand(command_[i]);
   }
 
     
 }
   
   void PickAndPlaceController::commandCB(const trajectory_msgs::JointTrajectoryPointConstPtr& msg){
+    
     if(msg->positions.size()!=7)
     {
       ROS_ERROR_STREAM("Dimension of command (" << msg->positions.size() << ") does not match number of joints. Not executing!");
       return;
     }
-    commands_buffer_.writeFromNonRT(msg->positions);
+    
+    for(int i =0; i< 7; i++)
+      command_[i] = msg->positions[i];
+    
   }
 
 
