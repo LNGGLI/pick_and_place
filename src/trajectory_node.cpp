@@ -226,7 +226,7 @@ int main(int argc, char **argv)
         fkine_msg.transforms[0].translation.y = fkine[1][3];
         fkine_msg.transforms[0].translation.z = fkine[2][3];
 
-        sun::UnitQuaternion quat_fkine(fkine); 
+        sun::UnitQuaternion quat_fkine(fkine);  // inizializzazione quaternione con matrice 4x4
         TooN::Vector<3, double> fkine_vec_quat = quat_fkine.getV();
         fkine_msg.transforms[0].rotation.x = unit_quat_d.getS();
         fkine_msg.transforms[0].rotation.y = fkine_vec_quat[0];
