@@ -59,6 +59,9 @@ void PickAndPlaceController::starting(const ros::Time& /* time */) {
 
 void PickAndPlaceController::update(const ros::Time& time,
                                             const ros::Duration& period) {
+
+  std::cout << "Period: " << period << std::endl;
+  
   for(int i = 0;i<7;i++){
     position_joint_handles_[i].setCommand(command_[i]);
   }
