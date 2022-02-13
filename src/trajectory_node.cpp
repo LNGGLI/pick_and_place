@@ -115,8 +115,8 @@ int main(int argc, char **argv)
         std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
 
     
-    double Ts = 0.035; // periodo
-    double fs = 1/Ts; // frequenza
+    double Ts = 0.001; // periodo s
+    double fs = 1/Ts; // frequenza Hz
     
 
     ros::Rate loop_rate(fs); // Hz
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     bool start = true;
 
 
-    while (ros::ok())  // && !cartesian_traj.isCompleate(t)
+    while (ros::ok() && !cartesian_traj.isCompleate(t))  // && !cartesian_traj.isCompleate(t)
     {
 
         t = ros::Time::now().toSec() - begin; // tempo trascorso
@@ -233,7 +233,6 @@ int main(int argc, char **argv)
         fkine_msg.transforms[0].rotation.z = fkine_vec_quat[1];
         fkine_msg.transforms[0].rotation.w = fkine_vec_quat[2];
 
-          
         fkine_pb.publish(fkine_msg);
         
 
