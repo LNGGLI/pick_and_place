@@ -56,13 +56,12 @@ bool PickAndPlaceController::init(hardware_interface::RobotHW* robot_hardware,
 
 void PickAndPlaceController::starting(const ros::Time& /* time */) {
 
-  std::vector<double> current_positions(n_joints_, 0.0);
-
+  initial_positions_.resize(7);
     for (std::size_t i = 0; i < n_joints_; ++i)
     {
-      current_positions[i] = position_joint_handles_[i].getPosition();
+      initial_positions_[i] = position_joint_handles_[i].getPosition();
     }
-    commands_buffer_.initRT(current_positions);
+    commands_buffer_.initRT(initial_positions_);
 
   elapsed_time_ = ros::Duration(0.0);
 }
