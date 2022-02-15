@@ -6,29 +6,34 @@
       ai motori. Utilizza la cinematica inversa interna.
       
     </description>
-    </class>
+  </class>
 
-    <class name="controllers/CartesianPoseController" type="controllers::CartesianPoseController" base_class_type="controller_interface::ControllerBase">
+  <class name="controllers/CartesianPoseController" type="controllers::CartesianPoseController" base_class_type="controller_interface::ControllerBase">
     <description>
         Controller che segue una traiettoria in cartesiano.
     </description>
-    </class>
+  </class>
 
-    <class name="controllers/CartesianImpedanceController" type="controllers::CartesianImpedanceController" base_class_type="controller_interface::ControllerBase">
+  <class name="controllers/CartesianImpedanceController" type="controllers::CartesianImpedanceController" base_class_type="controller_interface::ControllerBase">
     <description>
         Controller che segue una traiettoria in cartesiano applicando coppie. Senza cinematica inversa.
     </description>
-    </class>
+  </class>
 
-    <class name="controllers/PickAndPlaceController" type="controllers::PickAndPlaceController" base_class_type="controller_interface::ControllerBase">
-      <description>
+  <class name="controllers/PickAndPlaceController" type="controllers::PickAndPlaceController" base_class_type="controller_interface::ControllerBase">
+    <description>
           Controller che segue una traiettoria in spazio giunti.
       </description>
-      </class>
-  
+  </class>
+
+  <class name="controllers/JointVelocityController" type="controllers::JointVelocityController" base_class_type="controller_interface::ControllerBase">
+    <description>
+            Controller che segue una traiettoria in spazio giunti.
+        </description>
+  </class>
+
+
 </library>
-
-
 
 <!-- 
 <library path="lib/lib<name_of_your_controller_library>">

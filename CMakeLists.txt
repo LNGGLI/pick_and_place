@@ -156,8 +156,9 @@ src/cartesian_torque_controller.cpp
 src/cartesian_impedance_controller.cpp
 src/cartesian_pose_controller.cpp
 src/pick_and_place_controller.cpp
+src/joint_velocity_controller.cpp
 )
-add_library(panda 
+add_library(panda STATIC
 src/Panda.cpp)
 
 target_link_libraries(controllers 
