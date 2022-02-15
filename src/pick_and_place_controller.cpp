@@ -48,7 +48,7 @@ bool PickAndPlaceController::init(hardware_interface::RobotHW* robot_hardware,
   // inizializzazione del buffer realtime e del subscriber
 
   commands_buffer_.writeFromNonRT(std::vector<double>(n_joints_, 0.0));
-  sub_command_ = node_handle.subscribe<trajectory_msgs::JointTrajectoryPoint>("/joint_commands", 1, &PickAndPlaceController::commandCB, this);
+  sub_command_ = node_handle.subscribe<trajectory_msgs::JointTrajectoryPoint>("/joint_commands", 1, &PickAndPlaceController::commandCB, this,ros::TransportHints().reliable().tcpNoDelay());
   
 
   return true;
@@ -56,12 +56,12 @@ bool PickAndPlaceController::init(hardware_interface::RobotHW* robot_hardware,
 
 void PickAndPlaceController::starting(const ros::Time& /* time */) {
 
-  initial_positions_.resize(7);
+  position_.resize(7);
     for (std::size_t i = 0; i < n_joints_; ++i)
     {
-      initial_positions_[i] = position_joint_handles_[i].getPosition();
+      position_[i] = position_joint_handles_[i].getPosition();
     }
-    commands_buffer_.initRT(initial_positions_);
+    commands_buffer_.initRT(position_);
 
   elapsed_time_ = ros::Duration(0.0);
 }
@@ -71,9 +71,13 @@ void PickAndPlaceController::update(const ros::Time& /*time*/,
 
   std::vector<double> & commands = *commands_buffer_.readFromRT();
   
-  std::cout << "Period: " << period << std::endl;
-  for(int i = 0;i<7;i++){
-    position_joint_handles_[i].setCommand(commands[i]);
+  for(int i = 0; i < 7; i++){
+    position_[i]  = filter_params_*commands[i] + (1-filter_params_)*position_[i];
+  }
+    
+  // std::cout << "Period: " << period << std::endl;
+  for(int i = 0; i < 7; i++){
+    position_joint_handles_[i].setCommand(position_[i]);
   }
 
     
