@@ -60,32 +60,6 @@ namespace trajectory{
 
     void stateCB(const franka_msgs::FrankaState::ConstPtr& msg){
 
-        double transform[16];
-        for(int i = 0; i < 16 ; i++)
-            transform[i]= msg->O_T_EE[i]; // ATTENZIONE la O_T_EE è passata per colonne!
-       
-
-        // Stampa matrice di transformazione
-        std::cout << "Matrice di trasformazione iniziale: \n";
-        TooN::Matrix<4,4,double> posa;
-        for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                posa[j][i] = transform[j+4*i];
-            }
-            std::cout << std::endl;
-        }
-
-         for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                std::cout << posa[i][j] << " ";
-            }
-            std::cout << std::endl;
-        }
-
         for(int i = 0; i < 7; i++)
             initial_conf[i] = msg->q[i];
         

@@ -33,11 +33,12 @@ class JointVelocityController : public controller_interface::MultiInterfaceContr
   std::vector<hardware_interface::JointHandle> velocity_joint_handles_;
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;
   ros::Duration elapsed_time_;
-  double gain = 0.1;
+  double gain = 1;
   
   std::array<double,7> q_commands_;
   std::array<double,7> qd_commands_;
   ros::Subscriber sub_command_;
+  ros::Publisher pub_command_;
 };
 
 }  // namespace controllers

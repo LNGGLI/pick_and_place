@@ -79,7 +79,7 @@ namespace controllers
     }
 
     sub_command_ = node_handle.subscribe<trajectory_msgs::JointTrajectoryPoint>("/joint_commands", 1, &JointVelocityController::commandCB, this, ros::TransportHints().reliable().tcpNoDelay());
-
+    pub_command_ = node_handle.advertise<trajectory_msgs::JointTrajectoryPoint>("/joint_commands_letti",1);
     return true;
   }
 
@@ -104,6 +104,7 @@ namespace controllers
                                        const ros::Duration &period)
   {
 
+    trajectory_msgs::JointTrajectoryPoint msg;
     franka::RobotState state = state_handle_->getRobotState();
 
     Eigen::Map<Eigen::Matrix<double, 7, 1>> q_attuale(state.q.data());
@@ -115,8 +116,12 @@ namespace controllers
 
     for (int i = 0; i < 7; i++)
     {
+      msg.velocities.push_back(omega[i]);
       velocity_joint_handles_[i].setCommand(omega[i]);
     }
+
+    pub_command_.publish(msg);
+    
   }
 
   void JointVelocityController::stopping(const ros::Time & /*time*/)
