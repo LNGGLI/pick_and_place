@@ -33,7 +33,7 @@ class JointVelocityController : public controller_interface::MultiInterfaceContr
   std::vector<hardware_interface::JointHandle> velocity_joint_handles_;
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;
   ros::Duration elapsed_time_;
-  double gain = 1.1;
+  double gain = 0.1;
   
   realtime_tools::RealtimeBuffer<std::vector<double>> commands_buffer_;
   realtime_tools::RealtimeBuffer<std::vector<double>> velocity_buffer_;

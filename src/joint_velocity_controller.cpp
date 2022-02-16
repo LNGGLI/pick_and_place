@@ -93,16 +93,16 @@ namespace controllers
     initial_position.resize(7);
     franka::RobotState initial_state = state_handle_->getRobotState();
     Eigen::Map<Eigen::Matrix<double, 7, 1>> q_initial(initial_state.q.data());
-    Eigen::Map<Eigen::Matrix<double, 7, 1>> qd_initial(initial_state.dq.data());
+    // Eigen::Map<Eigen::Matrix<double, 7, 1>> qd_initial(initial_state.dq.data());
 
 
     for (std::size_t i = 0; i < 7; ++i)
     {
       initial_position[i] = q_initial[i];
-      initial_velocity[i] = qd_initial[i];
+      // initial_velocity[i] = qd_initial[i];
     }
     commands_buffer_.initRT(initial_position);
-    velocity_buffer_.initRT(initial_velocity);
+    // velocity_buffer_.initRT(initial_velocity);
 
   }
 
@@ -111,20 +111,21 @@ namespace controllers
   {
 
     std::vector<double> & commands = *commands_buffer_.readFromRT();
+    std::vector<double> & velocity = *velocity_buffer_.readFromRT();
     franka::RobotState state = state_handle_->getRobotState();
 
     Eigen::Map<Eigen::Matrix<double, 7, 1>> q_attuale(state.q.data());
     Eigen::Map<Eigen::Matrix<double, 7, 1>> q_comandata(commands.data());
-    Eigen::Map<Eigen::Matrix<double, 7, 1>> qp_comand(commands.data());
-    velocity_buffer_
-
-    Eigen::Matrix<double, 7, 1> omega =  gain*(q_comandata-q_attuale);
-
+    Eigen::Map<Eigen::Matrix<double, 7, 1>> qp_command(velocity.data());
     
+    //std::cout << qp_command  << "\n"; 
+    Eigen::Matrix<double, 7, 1> omega = qp_command +  gain*(q_comandata-q_attuale);
+
     for (int i = 0; i < 7; i++)
     {
       velocity_joint_handles_[i].setCommand(omega[i]);
     }
+
   }
 
   void JointVelocityController::stopping(const ros::Time & /*time*/)
