@@ -78,8 +78,6 @@ namespace controllers
       return false;
     }
 
-    commands_buffer_.writeFromNonRT(std::vector<double>(7, 0.0));
-    velocity_buffer_.writeFromNonRT(std::vector<double>(7, 0.0));
     sub_command_ = node_handle.subscribe<trajectory_msgs::JointTrajectoryPoint>("/joint_commands", 1, &JointVelocityController::commandCB, this, ros::TransportHints().reliable().tcpNoDelay());
 
     return true;
@@ -93,39 +91,32 @@ namespace controllers
     initial_position.resize(7);
     franka::RobotState initial_state = state_handle_->getRobotState();
     Eigen::Map<Eigen::Matrix<double, 7, 1>> q_initial(initial_state.q.data());
-    // Eigen::Map<Eigen::Matrix<double, 7, 1>> qd_initial(initial_state.dq.data());
-
+    Eigen::Map<Eigen::Matrix<double, 7, 1>> qd_initial(initial_state.dq.data());
 
     for (std::size_t i = 0; i < 7; ++i)
     {
-      initial_position[i] = q_initial[i];
-      // initial_velocity[i] = qd_initial[i];
+      q_commands_[i] = q_initial[i];
+      qd_commands_[i] = qd_initial[i];
     }
-    commands_buffer_.initRT(initial_position);
-    // velocity_buffer_.initRT(initial_velocity);
-
   }
 
   void JointVelocityController::update(const ros::Time & /* time */,
                                        const ros::Duration &period)
   {
 
-    std::vector<double> & commands = *commands_buffer_.readFromRT();
-    std::vector<double> & velocity = *velocity_buffer_.readFromRT();
     franka::RobotState state = state_handle_->getRobotState();
 
     Eigen::Map<Eigen::Matrix<double, 7, 1>> q_attuale(state.q.data());
-    Eigen::Map<Eigen::Matrix<double, 7, 1>> q_comandata(commands.data());
-    Eigen::Map<Eigen::Matrix<double, 7, 1>> qp_command(velocity.data());
-    
-    //std::cout << qp_command  << "\n"; 
-    Eigen::Matrix<double, 7, 1> omega = qp_command +  gain*(q_comandata-q_attuale);
+    Eigen::Map<Eigen::Matrix<double, 7, 1>> q_comandata(q_commands_.data());
+    Eigen::Map<Eigen::Matrix<double, 7, 1>> qp_command(qd_commands_.data());
+
+    //std::cout << qp_command  << "\n";
+    Eigen::Matrix<double, 7, 1> omega = qp_command + gain * (q_comandata - q_attuale);
 
     for (int i = 0; i < 7; i++)
     {
       velocity_joint_handles_[i].setCommand(omega[i]);
     }
-
   }
 
   void JointVelocityController::stopping(const ros::Time & /*time*/)
@@ -142,8 +133,12 @@ namespace controllers
       ROS_ERROR_STREAM("Dimension of command (" << msg->positions.size() << ") does not match number of joints. Not executing!");
       return;
     }
-    commands_buffer_.writeFromNonRT(msg->positions);
-    velocity_buffer_.writeFromNonRT(msg->velocities);
+
+    for (int i = 0; i < 7; i++)
+    {
+      q_commands_[i] = msg->positions[i];
+      qd_commands_[i] = msg->velocities[i];
+    }
   }
 
 } // namespace controllers

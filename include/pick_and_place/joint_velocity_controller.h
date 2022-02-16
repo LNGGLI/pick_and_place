@@ -35,8 +35,8 @@ class JointVelocityController : public controller_interface::MultiInterfaceContr
   ros::Duration elapsed_time_;
   double gain = 0.1;
   
-  realtime_tools::RealtimeBuffer<std::vector<double>> commands_buffer_;
-  realtime_tools::RealtimeBuffer<std::vector<double>> velocity_buffer_;
+  std::array<double,7> q_commands_;
+  std::array<double,7> qd_commands_;
   ros::Subscriber sub_command_;
 };
 
