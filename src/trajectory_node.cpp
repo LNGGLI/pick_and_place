@@ -124,8 +124,10 @@ int main(int argc, char **argv)
     TooN::Matrix<3, 3> Rot_des = TooN::Data(1,0,0,0,0,1,0,-1,0); 
     std::cout << Rot_des;
     sun::UnitQuaternion final_quat(Rot_des);
-    sun::UnitQuaternion delta_quat = final_quat*inv(init_quat);
+    sun::UnitQuaternion delta_quat = final_quat*inv(init_quat); // errore in terna base
     sun::AngVec angvec = delta_quat.toangvec();
+
+    // Nota: la libreria vuole delta_quat definita in terna base.
 
     // Generazione della traiettoria su primitiva di percorso di tipo segmento:
 
@@ -134,12 +136,17 @@ int main(int argc, char **argv)
     TooN::Vector<3, double> pf({0.5,0.5,0.5});
     //TooN::Vector<3, double> pf({0.655105430989015, 0.1096259365986445, 0.06857646438044779-0.01});
 
-    sun::Quintic_Poly_Traj qp_position(Tf, 0.0, 1.0); // polinomio quintico utilizzato sia per line_traj che theta_traj
-    sun::Quintic_Poly_Traj qp_orientation(Tf, 0.0, angvec.getAng());
-
+    sun::Quintic_Poly_Traj qp_position(Tf, 0.0, 1.0); // polinomio quintico utilizzato per line_traj 
+    sun::Quintic_Poly_Traj qp_orientation(Tf, 0.0, angvec.getAng()); // polinomio quintico utilizzato per quat_traj
+    
+    
     sun::Line_Segment_Traj line_traj(pi, pf, qp_position);
     sun::Rotation_Const_Axis_Traj quat_traj(init_quat, angvec.getVec(), qp_orientation);
-
+    
+    // Nota: la traiettoria in orientamento è quella definita dal Delta_quat.
+    // Perchè vogliamo andare da init_quat (orientamento iniziale) a final_quat (orientamento finale).
+    // Il metodo getquaternion(t) restituisce DeltaQuat(t) * init_quat. 
+    
     sun::Cartesian_Independent_Traj cartesian_traj(line_traj, quat_traj);
 
     // Accensione del controller
