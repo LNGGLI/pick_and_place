@@ -81,7 +81,7 @@ int main(int argc, char **argv)
         "/franka_state_controller/franka_states", 1, stateCB);
 
     // Lettura stato iniziale
-    while (!initial_read)
+    while (!initial_read && ros::ok())
     {
         ros::spinOnce();
         ros::Duration(0.2).sleep();
@@ -121,7 +121,8 @@ int main(int argc, char **argv)
     TooN::Vector<3> pi = TooN::makeVector(initial_pose[0][3], initial_pose[1][3], initial_pose[2][3]); //initial_transform.get_translation();                     // initial_position
 
     sun::UnitQuaternion init_quat(initial_pose); // initial_transform.get_rotation().get_matrix()); // initial orientation
-    TooN::Matrix<3, 3> Rot_des = TooN::Data(1,0,0,0,-1,0,0,0,-1); 
+    TooN::Matrix<3, 3> Rot_des = TooN::Data(1,0,0,0,0,1,0,-1,0); 
+    std::cout << Rot_des;
     sun::UnitQuaternion final_quat(Rot_des);
     sun::UnitQuaternion delta_quat = final_quat*inv(init_quat);
     sun::AngVec angvec = delta_quat.toangvec();
@@ -130,7 +131,8 @@ int main(int argc, char **argv)
 
     std::cout << "Generazione della traiettoria in cartesiano \n";
 
-    TooN::Vector<3, double> pf({0.655105430989015, 0.1096259365986445, 0.06857646438044779-0.01});
+    TooN::Vector<3, double> pf({0.5,0.5,0.5});
+    //TooN::Vector<3, double> pf({0.655105430989015, 0.1096259365986445, 0.06857646438044779-0.01});
 
     sun::Quintic_Poly_Traj qp_position(Tf, 0.0, 1.0); // polinomio quintico utilizzato sia per line_traj che theta_traj
     sun::Quintic_Poly_Traj qp_orientation(Tf, 0.0, angvec.getAng());
@@ -178,9 +180,9 @@ int main(int argc, char **argv)
     {
 
         t = ros::Time::now().toSec() - begin; // tempo trascorso
-        posizione_d = cartesian_traj.getPosition(0);
+        posizione_d = cartesian_traj.getPosition(t);
         unit_quat_d = cartesian_traj.getQuaternion(t);
-        xd = cartesian_traj.getLinearVelocity(0);
+        xd = cartesian_traj.getLinearVelocity(t);
         w = cartesian_traj.getAngularVelocity(t);
 
         qDH_k = panda.clik(qDH_k,       //<- qDH attuale
