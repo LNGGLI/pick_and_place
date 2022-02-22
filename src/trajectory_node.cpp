@@ -5,7 +5,7 @@
 #include <string>
 
 // Server , Actions
-#include <actionlib/client/simple_action_client.h>
+#include <pick_and_place/SetTraj.h>
 
 // Utils
 #include <ros/ros.h>
@@ -13,10 +13,9 @@
 
 #include <pick_and_place/trajectory_node.h>
 #include <pick_and_place/check_realtime.h>
-#include <sun_traj_lib/Cartesian_Independent_Traj.h>
-#include <sun_traj_lib/Quintic_Poly_Traj.h>
-#include <sun_traj_lib/Line_Segment_Traj.h>
-#include <sun_traj_lib/Rotation_Const_Axis_Traj.h>
+
+// Sun
+#include <sun_math_toolbox/UnitQuaternion.h>
 
 // Messages
 #include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
@@ -33,52 +32,19 @@ int main(int argc, char **argv)
 
     ros::init(argc, argv, "trajectory_node");
     ros::NodeHandle nh;
-    ros::Publisher command_pb = nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(
-        "/cartesian_trajectory_command", 10);
 
-    ros::Subscriber pose_sub = nh.subscribe<franka_msgs::FrankaState>(
-        "/franka_state_controller/franka_states", 1, stateCB);
-
-
-    while (!initial_read)
-    {
-        ros::spinOnce();
-        ros::Duration(0.2).sleep();
-        std::cout << "In attesa di leggere la posa iniziale\n";
-    }
-
-    std::cout << "Configurazione iniziale (initial_transform) acquisita. \n";
-
-    // initial_transform è una Toon::SE3
-
-    TooN::Vector<3> pi = initial_transform.get_translation();                     // initial_position
-
-    sun::UnitQuaternion init_quat(initial_transform.get_rotation().get_matrix()); // initial orientation
-
-    std::cout << "Generazione della traiettoria in cartesiano \n";
-
-    // Generazione della traiettoria su primitiva di percorso di tipo segmento:
-
-    // TODO: scegliere punto finale
-    TooN::Vector<3, double> pf({0.3, 0.3, 0.3});
-    TooN::Vector<3, double> axis({0, 0, 1});
-    
-    sun::Quintic_Poly_Traj qp(Tf, 0, 1); // polinomio quintico utilizzato sia per line_traj che theta_traj
-    
-    sun::Line_Segment_Traj line_traj(pi, pf, qp);
-    sun::Rotation_Const_Axis_Traj quat_traj(init_quat, axis, qp);
-
-    sun::Cartesian_Independent_Traj cartesian_traj(line_traj, quat_traj);
-
+    ros::ServiceClient client_set_traj = nh.serviceClient<pick_and_place::SetTraj>("/set_traj");
     // Accensione del controller
-    {
-    if (!check_realtime()) 
-      throw std::runtime_error("REALTIME NOT AVAILABLE");
+    // {
+    // if (!check_realtime()) 
+    //   throw std::runtime_error("REALTIME NOT AVAILABLE");
 
-    if (!set_realtime_SCHED_FIFO()) 
-        throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
+    // if (!set_realtime_SCHED_FIFO()) 
+    //     throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
 
-    }
+    // }
+
+
 
     bool ok = switch_controller("cartesian_pose_controller", "");
 
@@ -87,7 +53,33 @@ int main(int argc, char **argv)
     else
         std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
 
-    
 
+    pick_and_place::SetTraj set_traj_msg;
+
+    TooN::Vector<3,double> goal_position = TooN::makeVector(0.4, 0.4, 0.4);
+    TooN::Matrix<3, 3> R_des = TooN::Data(1,0,0,0,0,1,0,-1,0); // orientamento desiderata
+    sun::UnitQuaternion goal_quaternion(R_des);
+    ros::Duration(4).sleep();
+    set_traj_msg.request.goal_position.x = goal_position[0];
+    set_traj_msg.request.goal_position.y = goal_position[1];
+    set_traj_msg.request.goal_position.z = goal_position[2];
+
+    set_traj_msg.request.goal_quaternion.w = goal_quaternion.getS();
+    set_traj_msg.request.goal_quaternion.x = goal_quaternion.getV()[0];
+    set_traj_msg.request.goal_quaternion.y = goal_quaternion.getV()[1];
+    set_traj_msg.request.goal_quaternion.z = goal_quaternion.getV()[2];
+
+    set_traj_msg.request.Tf = 15;
+
+    if(client_set_traj.call(set_traj_msg)){
+        if(set_traj_msg.response.success)
+            std::cout << "Il setting della traiettoria è stato effettuato correttamente\n";
+        else
+            std::cout <<"Il setting della traiettoria non ha avuto successo \n";
+
+    }
+    else
+        std::cout << "Errore nella chiamata del servizio \n";
+    
     return 0;
 }

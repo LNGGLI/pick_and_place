@@ -1,4 +1,5 @@
-float64[3] goal_position
-float64[4] goal_quaternion
+geometry_msgs/Point goal_position
+geometry_msgs/Quaternion goal_quaternion
+float64 Tf
 ---
 bool success

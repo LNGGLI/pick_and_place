@@ -1,6 +1,7 @@
 // Copyright (c) 2017 Franka Emika GmbH
 // Use of this source code is governed by the Apache-2.0 license, see LICENSE
 #include <pick_and_place/cartesian_pose_controller.h>
+#include <pick_and_place/SetTraj.h>
 
 #include <cmath>
 #include <memory>
@@ -29,6 +30,56 @@
 
 namespace controllers
 {
+  bool set_traj(pick_and_place::SetTraj::Request &req, pick_and_place::SetTraj::Response &resp){
+    
+    // Lettura posa finale e tempo della traiettoria
+    TooN::Vector<3,double> final_position = TooN::makeVector(req.goal_position.x,req.goal_position.y,req.goal_position.z); 
+    TooN::Vector<4,double> final_quaternion= TooN::makeVector(req.goal_quaternion.w,req.goal_quaternion.x,req.goal_quaternion.y,req.goal_quaternion.z);
+    double Tf = req.Tf;
+
+     
+    // Lettura posa attuale
+    std::array<double,16> current_pose = cartesian_pose_handle_->getRobotState().O_T_EE_c;
+
+    TooN::Matrix<4,4,double> toon_current_pose = TooN::Data(current_pose[0], current_pose[4], current_pose[8], current_pose[12],
+                                                    current_pose[1],current_pose[5],current_pose[9],current_pose[13],
+                                                    current_pose[2],current_pose[6],current_pose[10],current_pose[14],
+                                                    current_pose[3],current_pose[7],current_pose[11],current_pose[15]);
+    
+    // Ricavo posizione e quaternione attuale in base alla posa letta 
+    TooN::Vector<3> current_position = sun::transl(toon_current_pose); 
+    sun::UnitQuaternion current_quat(toon_current_pose);
+
+    // Calcolo Delta_quaternione per la traiettoria in orientamento
+    sun::UnitQuaternion final_quat(final_quaternion);
+    sun::UnitQuaternion delta_quat = final_quat*inv(current_quat); // errore in terna base
+    sun::AngVec angvec = delta_quat.toangvec();
+
+
+    // Generazione della traiettoria
+    sun::Quintic_Poly_Traj qp_position(Tf, 0.0, 1.0); // polinomio quintico utilizzato per line_traj 
+    sun::Quintic_Poly_Traj qp_orientation(Tf, 0.0, angvec.getAng()); // polinomio quintico utilizzato per quat_traj
+    sun::Line_Segment_Traj line_traj(current_position, final_position, qp_position);
+    sun::Rotation_Const_Axis_Traj quat_traj(current_quat, angvec.getVec(), qp_orientation);  
+    sun::Cartesian_Independent_Traj local_traj(line_traj, quat_traj);
+
+    // cartesian_traj_ = sun::Cartesian_Independent_Traj_Ptr(line_traj,quat_traj);   
+
+    cartesian_traj_ = local_traj.clone();
+    if(cartesian_traj_!=nullptr){
+      resp.success = true;
+    }
+    else{
+      resp.success = false;
+    }
+
+    
+
+    start = true;
+    elapsed_time_ = ros::Duration(0.0);
+
+    return true;
+  }
 
   bool CartesianPoseController::init(hardware_interface::RobotHW *robot_hardware,
                                      ros::NodeHandle &node_handle)
@@ -69,101 +120,63 @@ namespace controllers
     }
 
 
-    command_pb = node_handle.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(
+    command_pb_ = node_handle.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(
         "/cartesian_trajectory_command_internal", 1);
 
-    
-    
-    
+    server_set_traj_ = node_handle.advertiseService("/set_traj", set_traj);
     
     
     return true;
-
-
   }
 
   void CartesianPoseController::starting(const ros::Time & /* time */)
   {
-    initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_c;
-
-    TooN::Matrix<4,4,double> toon_pose = TooN::Data(initial_pose_[0], initial_pose_[4], initial_pose_[8], initial_pose_[12],
-                                                    initial_pose_[1],initial_pose_[5],initial_pose_[9],initial_pose_[13],
-                                                    initial_pose_[2],initial_pose_[6],initial_pose_[10],initial_pose_[14],
-                                                    initial_pose_[3],initial_pose_[7],initial_pose_[11],initial_pose_[15]);
-    double Tf = 15;
-    std::cout << toon_pose;
-    TooN::Vector<3> position_d_ = sun::transl(toon_pose);
-    
-    sun::UnitQuaternion init_quat(toon_pose);
-    
-    TooN::Matrix<3, 3> Rot_des = TooN::Data(1,0,0,0,0,1,0,-1,0); // orientamento desiderata
-    
-    sun::UnitQuaternion final_quat(Rot_des);
-    sun::UnitQuaternion delta_quat = final_quat*inv(init_quat); // errore in terna base
-    sun::AngVec angvec = delta_quat.toangvec();
-
-    // Nota: la libreria vuole delta_quat definita in terna base.
-
-    // Generazione della traiettoria su primitiva di percorso di tipo segmento:
-
-    std::cout << "Generazione della traiettoria in cartesiano \n";
-
-    TooN::Vector<3, double> pf({0.4,0.4,0.4});
-    //TooN::Vector<3, double> pf({0.655105430989015, 0.1096259365986445, 0.06857646438044779-0.01});
-
-    sun::Quintic_Poly_Traj qp_position(Tf, 0.0, 1.0); // polinomio quintico utilizzato per line_traj 
-    sun::Quintic_Poly_Traj qp_orientation(Tf, 0.0, angvec.getAng()); // polinomio quintico utilizzato per quat_traj
-    
-    
-    sun::Line_Segment_Traj line_traj(position_d_, pf, qp_position);
-    sun::Rotation_Const_Axis_Traj quat_traj(init_quat, angvec.getVec(), qp_orientation);
-    
-    // Nota: la traiettoria in orientamento è quella definita dal Delta_quat.
-    // Perchè vogliamo andare da init_quat (orientamento iniziale) a final_quat (orientamento finale).
-    // Il metodo getquaternion(t) restituisce DeltaQuat(t) * init_quat. 
-    
-    sun::Cartesian_Independent_Traj local_traj(line_traj, quat_traj);
-    cartesian_traj_ = local_traj.clone();
-
-
-    elapsed_time_ = ros::Duration(0.0);
+    pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_c;
+     
   }
 
   void CartesianPoseController::update(const ros::Time & /* time */, const ros::Duration &period)
   {
-    
-    pose_ = initial_pose_;
     elapsed_time_ += period;
+    if(!start){
+      cartesian_pose_handle_->setCommand(pose_);
+    }
+    else{
+      // Posizione
+      TooN::Vector<3,double> position =  cartesian_traj_->getPosition(elapsed_time_.toSec());
+      pose_[12] = position[0]; // x
+      pose_[13] = position[1]; // y
+      pose_[14] = position[2]; // z
+      
+      // Orientamento
+      TooN::Matrix<3,3,double> R = cartesian_traj_->getQuaternion(elapsed_time_.toSec()).R();
+      
+      pose_[0] = R[0][0];
+      pose_[1] = R[1][0];
+      pose_[2] = R[2][0];
+      pose_[4] = R[0][1];
+      pose_[5] = R[1][1];
+      pose_[6] = R[2][1];
+      pose_[8] = R[0][2];
+      pose_[9] = R[1][2];
+      pose_[10] = R[2][2];
+      cartesian_pose_handle_->setCommand(pose_);
 
-    // Posizione
-    TooN::Vector<3,double> position =  cartesian_traj_->getPosition(elapsed_time_.toSec());
-    pose_[12] = position[0]; // x
-    pose_[13] = position[1]; // y
-    pose_[14] = position[2]; // z
+      trajectory_msgs::MultiDOFJointTrajectoryPoint msg;
+      msg.transforms.resize(1);
+      msg.transforms[0].translation.x = pose_[12];
+      msg.transforms[0].translation.y = pose_[13];
+      msg.transforms[0].translation.z = pose_[14];
+      command_pb_.publish(msg);
+    }
     
-    // Orientamento
-    TooN::Matrix<3,3,double> R = cartesian_traj_->getQuaternion(elapsed_time_.toSec()).R();
-    
-    pose_[0] = R[0][0];
-    pose_[1] = R[1][0];
-    pose_[2] = R[2][0];
-    pose_[4] = R[0][1];
-    pose_[5] = R[1][1];
-    pose_[6] = R[2][1];
-    pose_[8] = R[0][2];
-    pose_[9] = R[1][2];
-    pose_[10] = R[2][2];
-    cartesian_pose_handle_->setCommand(pose_);
-
-    trajectory_msgs::MultiDOFJointTrajectoryPoint msg;
-    msg.transforms.resize(1);
-    msg.transforms[0].translation.x = pose_[12];
-    msg.transforms[0].translation.y = pose_[13];
-    msg.transforms[0].translation.z = pose_[14];
-    command_pb.publish(msg);
     
     
   }
+
+
+ 
+
 
 } // namespace controllers
 

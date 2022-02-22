@@ -1,6 +1,7 @@
 // Copyright (c) 2017 Franka Emika GmbH
 // Use of this source code is governed by the Apache-2.0 license, see LICENSE
 #pragma once
+#include <pick_and_place/SetTraj.h>
 
 #include <array>
 #include <memory>
@@ -27,6 +28,28 @@
 
 namespace controllers {
 
+  // Variabili handlers
+  franka_hw::FrankaPoseCartesianInterface* cartesian_pose_interface_;
+  std::unique_ptr<franka_hw::FrankaCartesianPoseHandle> cartesian_pose_handle_;
+  
+  // Variabili per la traiettoria
+  Eigen::Vector3d position_d_;
+  Eigen::Quaterniond orientation_d_;
+  std::array<double, 16> pose_{};
+  std::array<double, 16> initial_pose_{};
+
+  sun::Cartesian_Independent_Traj* cartesian_traj_;
+  
+  // Variabili ROS
+  ros::Publisher command_pb_;
+  ros::ServiceServer server_set_traj_;
+
+  // Variabili di controllo
+  bool start = false;
+  ros::Duration elapsed_time_;
+
+  bool set_traj(pick_and_place::SetTraj::Request &req, pick_and_place::SetTraj::Response &resp);
+
 class CartesianPoseController
     : public controller_interface::MultiInterfaceController<franka_hw::FrankaPoseCartesianInterface,
                                                             franka_hw::FrankaStateInterface> {
@@ -34,22 +57,10 @@ class CartesianPoseController
   bool init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) override;
   void starting(const ros::Time&) override;
   void update(const ros::Time&, const ros::Duration& period) override;
-
+  
+ 
  private:
-  franka_hw::FrankaPoseCartesianInterface* cartesian_pose_interface_;
-  std::unique_ptr<franka_hw::FrankaCartesianPoseHandle> cartesian_pose_handle_;
-  ros::Duration elapsed_time_;
-  std::array<double, 16> pose_{};
-  std::array<double, 16> initial_pose_{};
-  bool start = true;
-
-
-  Eigen::Vector3d position_d_;
-  Eigen::Quaterniond orientation_d_;
-
-  sun::Cartesian_Independent_Traj* cartesian_traj_;
-  ros::Publisher command_pb;
-
+  
 };
 
 }  // namespace controllers
