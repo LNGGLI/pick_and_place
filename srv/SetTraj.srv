@@ -1,0 +1,4 @@
+float64[3] goal_position
+float64[4] goal_quaternion
+---
+bool success

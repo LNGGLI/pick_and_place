@@ -14,8 +14,6 @@
   
   <!-- Load dei controller -->
   <node name="pose_controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="--stopped cartesian_pose_controller"/>
-    
-  
-  <!-- Run del planner -->
+
   
 </launch>
