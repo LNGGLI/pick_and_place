@@ -27,8 +27,8 @@
 using controller_manager_msgs::SwitchControllerRequest;
 using controller_manager_msgs::SwitchControllerResponse;
 
-
 namespace trajectory{
+
 
     ros::ServiceClient client_set_traj;
 
@@ -36,6 +36,7 @@ namespace trajectory{
     sun::UnitQuaternion goal_quat;
 
     bool traj_running = false;
+
 
     bool switch_controller(const std::string& start_controller, const std::string& stop_controller){
 
@@ -100,9 +101,10 @@ namespace trajectory{
 
     void stateCB(const franka_msgs::FrankaState::ConstPtr& msg){
 
-        std::array<double,16> transform;
+        double transform[16];
         for(int i = 0; i < 16 ; i++)
             transform[i]= msg->O_T_EE[i]; // ATTENZIONE la O_T_EE è passata per colonne!
+
         
         double R_array[9] = {transform[0],transform[1],transform[2],  // Array matrice di rotazione (Column Major)
                             transform[4],transform[5],transform[6],
@@ -122,6 +124,7 @@ namespace trajectory{
         // Calcolo errore
         double delta_p = TooN::norm(current_pos - goal_position);
         double delta_q_norm = TooN::norm( (goal_quat*current_quat).getV() );
+
 
         if(delta_p < 0.01 && delta_q_norm < 0.01) 
             traj_running = false; // La traiettoria può considerarsi terminata

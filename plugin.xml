@@ -16,9 +16,15 @@
 
     <class name="controllers/CartesianImpedanceController" type="controllers::CartesianImpedanceController" base_class_type="controller_interface::ControllerBase">
     <description>
-        Controller che segue una traiettoria in cartesiano.
+        Controller che segue una traiettoria in cartesiano applicando coppie. Senza cinematica inversa.
     </description>
     </class>
+
+    <class name="controllers/PickAndPlaceController" type="controllers::PickAndPlaceController" base_class_type="controller_interface::ControllerBase">
+      <description>
+          Controller che segue una traiettoria in spazio giunti.
+      </description>
+      </class>
   
 </library>
 

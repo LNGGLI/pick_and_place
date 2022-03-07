@@ -4,15 +4,18 @@
 #include <stdexcept>
 #include <string>
 
+#include <pick_and_place/trajectory_node.h>
+#include <pick_and_place/Panda.h>
+
 // Server , Actions
 #include <pick_and_place/SetTraj.h>
 
 // Utils
 #include <ros/ros.h>
 #include <franka_gripper/franka_gripper.h>
-
-#include <pick_and_place/trajectory_node.h>
 #include <pick_and_place/check_realtime.h>
+
+
 
 // Sun
 #include <sun_math_toolbox/UnitQuaternion.h>
@@ -25,6 +28,7 @@
 /* rosbag record /jointsIK /cartesian_trajectory_command
  /franka_state_controller/joint_states_desired 
  /franka_state_controller/franka_states*/
+
 
 using namespace trajectory;
 
@@ -48,10 +52,12 @@ int main(int argc, char **argv)
     // Accensione del controller
     bool ok = switch_controller("cartesian_pose_controller", "");
 
+
     if (ok)
         std::cout << "Lo switch del controller è stato effettuato!" << std::endl;
     else
         std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
+
 
 
 
@@ -76,10 +82,7 @@ int main(int argc, char **argv)
     }
 
     std::cout << "Il robot ha raggiunto la posa assegnata \n";
+        
 
-
-
-
-    
     return 0;
 }

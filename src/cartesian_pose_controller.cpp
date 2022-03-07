@@ -14,6 +14,7 @@
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 
+
 #include <sun_traj_lib/Cartesian_Independent_Traj.h>
 #include <sun_traj_lib/Quintic_Poly_Traj.h>
 #include <sun_traj_lib/Line_Segment_Traj.h>
@@ -22,6 +23,7 @@
 
 
 #include <Eigen/Geometry>
+
 #include <sun_math_toolbox/UnitQuaternion.h>
 
 
@@ -116,23 +118,28 @@ namespace controllers
     }
 
 
+
     command_pb_ = node_handle.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(
         "/cartesian_trajectory_command_internal", 1);
 
     server_set_traj_ = node_handle.advertiseService("/set_traj", set_traj);
     
+
     
     return true;
-  }
+  } // end init
+
 
   void CartesianPoseController::starting(const ros::Time & /* time */)
   {
     pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_c;
     elapsed_time_ = ros::Duration(0.0); // Ogni volta che il controller viene avviato
+
   }
 
   void CartesianPoseController::update(const ros::Time & /* time */, const ros::Duration &period)
   {
+
     elapsed_time_ += period;
     if(!start){ // il controller è partito ma non è stata ancora assegnata nessuna posa desiderata.
       cartesian_pose_handle_->setCommand(pose_);
@@ -174,11 +181,8 @@ namespace controllers
       command_pb_.publish(msg);
     }
     
-    
-    
   }
-
-
+  
 } // namespace controllers
 
 PLUGINLIB_EXPORT_CLASS(controllers::CartesianPoseController,
