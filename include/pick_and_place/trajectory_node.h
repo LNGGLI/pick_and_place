@@ -30,11 +30,15 @@ using controller_manager_msgs::SwitchControllerResponse;
 namespace trajectory{
 
 
+    
+    struct CartesianGoal{
+        TooN::Vector<3,double> goal_position;
+        sun::UnitQuaternion goal_quaternion;
+        double Tf;
+    };
+
+    CartesianGoal cartesian_goal; // struct per definire il goal in cartesiano
     ros::ServiceClient client_set_traj;
-
-    TooN::Vector<3,double> goal_position;
-    sun::UnitQuaternion goal_quat;
-
     bool traj_running = false;
 
 
@@ -66,20 +70,20 @@ namespace trajectory{
     }
     
   
-    bool set_goal_and_call_srv(TooN::Vector<3,double> goal_position, sun::UnitQuaternion goal_quaternion, double Tf){
+    bool set_goal_and_call_srv(CartesianGoal cartesian_goal){
         
         pick_and_place::SetTraj set_traj_msg;
 
-        set_traj_msg.request.goal_position.x = goal_position[0];
-        set_traj_msg.request.goal_position.y = goal_position[1];
-        set_traj_msg.request.goal_position.z = goal_position[2];
+        set_traj_msg.request.goal_position.x = cartesian_goal.goal_position[0];
+        set_traj_msg.request.goal_position.y = cartesian_goal.goal_position[1];
+        set_traj_msg.request.goal_position.z = cartesian_goal.goal_position[2];
 
-        set_traj_msg.request.goal_quaternion.w = goal_quaternion.getS();
-        set_traj_msg.request.goal_quaternion.x = goal_quaternion.getV()[0];
-        set_traj_msg.request.goal_quaternion.y = goal_quaternion.getV()[1];
-        set_traj_msg.request.goal_quaternion.z = goal_quaternion.getV()[2];
+        set_traj_msg.request.goal_quaternion.w = cartesian_goal.goal_quaternion.getS();
+        set_traj_msg.request.goal_quaternion.x = cartesian_goal.goal_quaternion.getV()[0];
+        set_traj_msg.request.goal_quaternion.y = cartesian_goal.goal_quaternion.getV()[1];
+        set_traj_msg.request.goal_quaternion.z = cartesian_goal.goal_quaternion.getV()[2];
 
-        set_traj_msg.request.Tf = Tf;
+        set_traj_msg.request.Tf = cartesian_goal.Tf;
 
         if(client_set_traj.call(set_traj_msg)){
             if(set_traj_msg.response.success){
@@ -122,8 +126,8 @@ namespace trajectory{
         sun::UnitQuaternion current_quat(R);
 
         // Calcolo errore
-        double delta_p = TooN::norm(current_pos - goal_position);
-        double delta_q_norm = TooN::norm( (goal_quat*current_quat).getV() );
+        double delta_p = TooN::norm(current_pos - cartesian_goal.goal_position);
+        double delta_q_norm = TooN::norm( (cartesian_goal.goal_quaternion*current_quat).getV() );
 
 
         if(delta_p < 0.01 && delta_q_norm < 0.01) 

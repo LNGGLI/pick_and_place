@@ -37,40 +37,35 @@ int main(int argc, char **argv)
 
     ros::init(argc, argv, "trajectory_node");
     ros::NodeHandle nh;
-
+    
     client_set_traj = nh.serviceClient<pick_and_place::SetTraj>("/set_traj");
     ros::Subscriber state_sub = nh.subscribe<franka_msgs::FrankaState>("/franka_state_controller/franka_states", 1, stateCB);
     
     // Check e set realtime node
-    // if (!check_realtime()) 
-    //   throw std::runtime_error("REALTIME NOT AVAILABLE");
+    if (!check_realtime()) 
+      throw std::runtime_error("REALTIME NOT AVAILABLE");
 
-    // if (!set_realtime_SCHED_FIFO()) 
-    //     throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
+    if (!set_realtime_SCHED_FIFO()) 
+        throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
 
 
     // Accensione del controller
-    bool ok = switch_controller("cartesian_pose_controller", "");
-
-
-    if (ok){
-        std::cout << "Lo switch del controller è stato effettuato!" << std::endl;
+    bool success = switch_controller("cartesian_pose_controller", "");
+    if (!success){
+        std::cout << "Lo switch del controller non è andato a buon fine!" << std::endl;
+        return -1;
     }
-    else{
-        std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
-    }
-
-    // Costruzione e invio della posa desiderata 
-    goal_position = TooN::makeVector(0.4 , 0.4 , 0.4);
-
+    
+    // Costruzione e invio della posa desiderata
     TooN::Matrix<3,3,double> goal_R = TooN::Data(1,0,0,
                                                 0,0,1,
                                                 0,-1,0);
-                                                
-    goal_quat = sun::UnitQuaternion(goal_R);
-    double Tf = 10; // s 
 
-    bool success = set_goal_and_call_srv(goal_position, goal_quat, Tf);
+    cartesian_goal.goal_position = TooN::makeVector(0.4 , 0.4 , 0.4);                               
+    cartesian_goal.goal_quaternion = sun::UnitQuaternion(goal_R);
+    cartesian_goal.Tf = 10; // s 
+
+    success = set_goal_and_call_srv(cartesian_goal);
 
     while(ros::ok() && traj_running && success){
         
@@ -79,9 +74,7 @@ int main(int argc, char **argv)
         ros::Duration(3).sleep();
 
     }
-    
-    std::cout << "Il robot ha raggiunto la posa assegnata \n";
-        
 
+   
     return 0;
 }
