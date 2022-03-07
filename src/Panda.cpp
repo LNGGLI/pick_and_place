@@ -21,7 +21,7 @@
 
 */
 
-#include "sun_robot_lib/Robots/Panda.h"
+#include "pick_and_place/Panda.h"
 
 using namespace TooN;
 using namespace std;
