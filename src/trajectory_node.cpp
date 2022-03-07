@@ -18,8 +18,9 @@
 #include <sun_math_toolbox/UnitQuaternion.h>
 
 // Messages
-#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 #include <franka_msgs/FrankaState.h>
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
+
 
 /* rosbag record /jointsIK /cartesian_trajectory_command
  /franka_state_controller/joint_states_desired 
@@ -33,19 +34,18 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "trajectory_node");
     ros::NodeHandle nh;
 
-    ros::ServiceClient client_set_traj = nh.serviceClient<pick_and_place::SetTraj>("/set_traj");
+    client_set_traj = nh.serviceClient<pick_and_place::SetTraj>("/set_traj");
+    ros::Subscriber state_sub = nh.subscribe<franka_msgs::FrankaState>("/franka_state_controller/franka_states", 1, stateCB);
+    
+    // Check e set realtime node
+    if (!check_realtime()) 
+      throw std::runtime_error("REALTIME NOT AVAILABLE");
+
+    if (!set_realtime_SCHED_FIFO()) 
+        throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
+
+
     // Accensione del controller
-    // {
-    // if (!check_realtime()) 
-    //   throw std::runtime_error("REALTIME NOT AVAILABLE");
-
-    // if (!set_realtime_SCHED_FIFO()) 
-    //     throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
-
-    // }
-
-
-
     bool ok = switch_controller("cartesian_pose_controller", "");
 
     if (ok)
@@ -54,32 +54,32 @@ int main(int argc, char **argv)
         std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
 
 
-    pick_and_place::SetTraj set_traj_msg;
 
-    TooN::Vector<3,double> goal_position = TooN::makeVector(0.4, 0.4, 0.4);
-    TooN::Matrix<3, 3> R_des = TooN::Data(1,0,0,0,0,1,0,-1,0); // orientamento desiderata
-    sun::UnitQuaternion goal_quaternion(R_des);
-    ros::Duration(4).sleep();
-    set_traj_msg.request.goal_position.x = goal_position[0];
-    set_traj_msg.request.goal_position.y = goal_position[1];
-    set_traj_msg.request.goal_position.z = goal_position[2];
+    // Costruzione e invio della posa desiderata 
+    goal_position = TooN::makeVector(0.4 , 0.4 , 0.4);
 
-    set_traj_msg.request.goal_quaternion.w = goal_quaternion.getS();
-    set_traj_msg.request.goal_quaternion.x = goal_quaternion.getV()[0];
-    set_traj_msg.request.goal_quaternion.y = goal_quaternion.getV()[1];
-    set_traj_msg.request.goal_quaternion.z = goal_quaternion.getV()[2];
+    TooN::Matrix<3,3,double> goal_R = TooN::Data(1,0,0,
+                                                0,0,1,
+                                                0,-1,0);
+                                                
+    goal_quat = sun::UnitQuaternion(goal_R);
+    double Tf = 10; // s 
 
-    set_traj_msg.request.Tf = 15;
+    bool success = set_goal_and_call_srv(goal_position, goal_quat, Tf);
 
-    if(client_set_traj.call(set_traj_msg)){
-        if(set_traj_msg.response.success)
-            std::cout << "Il setting della traiettoria è stato effettuato correttamente\n";
-        else
-            std::cout <<"Il setting della traiettoria non ha avuto successo \n";
+    while(ros::ok() && traj_running && success){
+        
+        std::cout << " In attesa che il robot raggiunga la posa assegnata \n";
+        ros::spinOnce();
+        ros::Duration(3).sleep();
 
     }
-    else
-        std::cout << "Errore nella chiamata del servizio \n";
+
+    std::cout << "Il robot ha raggiunto la posa assegnata \n";
+
+
+
+
     
     return 0;
 }

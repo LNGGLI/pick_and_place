@@ -37,7 +37,6 @@ namespace controllers
     TooN::Vector<4,double> final_quaternion= TooN::makeVector(req.goal_quaternion.w,req.goal_quaternion.x,req.goal_quaternion.y,req.goal_quaternion.z);
     double Tf = req.Tf;
 
-     
     // Lettura posa attuale
     std::array<double,16> current_pose = cartesian_pose_handle_->getRobotState().O_T_EE_c;
 
@@ -59,26 +58,23 @@ namespace controllers
     // Generazione della traiettoria
     sun::Quintic_Poly_Traj qp_position(Tf, 0.0, 1.0); // polinomio quintico utilizzato per line_traj 
     sun::Quintic_Poly_Traj qp_orientation(Tf, 0.0, angvec.getAng()); // polinomio quintico utilizzato per quat_traj
-    sun::Line_Segment_Traj line_traj(current_position, final_position, qp_position);
-    sun::Rotation_Const_Axis_Traj quat_traj(current_quat, angvec.getVec(), qp_orientation);  
+    sun::Line_Segment_Traj line_traj(current_position, final_position, qp_position); // Traiettoria in posizione su percorso di tipo segmento
+    sun::Rotation_Const_Axis_Traj quat_traj(current_quat, angvec.getVec(), qp_orientation);  // Traiettoria in orientamento: rotazione attorno asse fisso nel tempo
     sun::Cartesian_Independent_Traj local_traj(line_traj, quat_traj);
-
-    // cartesian_traj_ = sun::Cartesian_Independent_Traj_Ptr(line_traj,quat_traj);   
 
     cartesian_traj_ = local_traj.clone();
     if(cartesian_traj_!=nullptr){
       resp.success = true;
+      start = true;
+      elapsed_time_ = ros::Duration(0.0); 
     }
     else{
+      std::cout << "Errore nella creazione della traiettoria in \"set_traj\" \n";
       resp.success = false;
     }
 
-    
-
-    start = true;
-    elapsed_time_ = ros::Duration(0.0);
-
     return true;
+
   }
 
   bool CartesianPoseController::init(hardware_interface::RobotHW *robot_hardware,
@@ -132,16 +128,17 @@ namespace controllers
   void CartesianPoseController::starting(const ros::Time & /* time */)
   {
     pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_c;
-     
+    elapsed_time_ = ros::Duration(0.0); // Ogni volta che il controller viene avviato
   }
 
   void CartesianPoseController::update(const ros::Time & /* time */, const ros::Duration &period)
   {
     elapsed_time_ += period;
-    if(!start){
+    if(!start){ // il controller è partito ma non è stata ancora assegnata nessuna posa desiderata.
       cartesian_pose_handle_->setCommand(pose_);
     }
     else{
+
       // Posizione
       TooN::Vector<3,double> position =  cartesian_traj_->getPosition(elapsed_time_.toSec());
       pose_[12] = position[0]; // x
@@ -162,20 +159,24 @@ namespace controllers
       pose_[10] = R[2][2];
       cartesian_pose_handle_->setCommand(pose_);
 
+      // Pubblicazione della traiettoria calcolata
       trajectory_msgs::MultiDOFJointTrajectoryPoint msg;
       msg.transforms.resize(1);
       msg.transforms[0].translation.x = pose_[12];
       msg.transforms[0].translation.y = pose_[13];
       msg.transforms[0].translation.z = pose_[14];
+      sun::UnitQuaternion q  = cartesian_traj_->getQuaternion(elapsed_time_.toSec());
+      msg.transforms[0].rotation.w = q.getS();
+      msg.transforms[0].rotation.x = q.getV()[0];
+      msg.transforms[0].rotation.y = q.getV()[1];
+      msg.transforms[0].rotation.z = q.getV()[2];
+      
       command_pb_.publish(msg);
     }
     
     
     
   }
-
-
- 
 
 
 } // namespace controllers

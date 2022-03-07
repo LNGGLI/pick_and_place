@@ -33,8 +33,6 @@ namespace controllers {
   std::unique_ptr<franka_hw::FrankaCartesianPoseHandle> cartesian_pose_handle_;
   
   // Variabili per la traiettoria
-  Eigen::Vector3d position_d_;
-  Eigen::Quaterniond orientation_d_;
   std::array<double, 16> pose_{};
   std::array<double, 16> initial_pose_{};
 
@@ -50,6 +48,10 @@ namespace controllers {
 
   bool set_traj(pick_and_place::SetTraj::Request &req, pick_and_place::SetTraj::Response &resp);
 
+
+
+
+
 class CartesianPoseController
     : public controller_interface::MultiInterfaceController<franka_hw::FrankaPoseCartesianInterface,
                                                             franka_hw::FrankaStateInterface> {
@@ -57,10 +59,7 @@ class CartesianPoseController
   bool init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) override;
   void starting(const ros::Time&) override;
   void update(const ros::Time&, const ros::Duration& period) override;
-  
- 
- private:
-  
+    
 };
 
 }  // namespace controllers
