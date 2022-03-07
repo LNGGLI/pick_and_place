@@ -75,6 +75,7 @@ int main(int argc, char **argv)
 
     // Homing del gripper
     homing_client.sendGoal( franka_gripper::HomingGoal());
+    // bool finished_before_timeout = waitForResult(homing_client); provare la template function
 
     // Move gripper ad una certa width
     franka_gripper::MoveGoal move_goal;
@@ -92,7 +93,7 @@ int main(int argc, char **argv)
         std::cout <<"Action did not finish before the time out. \n";
     }
 
-
+    // finished_before_timeout = waitForResult(move_client); provare la template function
 
 
     // Accensione del controller
@@ -126,7 +127,7 @@ int main(int argc, char **argv)
     char y;
 
     do{
-        std::cout << "Il gripper sta per chiudere, premere y per continuare o n per chiudere \n";
+        std::cout << "Il gripper sta per chiudere, premere y per continuare o n per abortire l'operazione \n";
         y = getchar();
         if(y == 'n')
             return -1;
@@ -144,6 +145,6 @@ int main(int argc, char **argv)
     // Invio del comando
     grasp_client.sendGoal(grasp_goal);
     grasp_client.waitForResult(ros::Duration(30.0));
-    
+    // finished_before_timeout = waitForResult(grasp_client); provare la template function 
     return 0;
 }

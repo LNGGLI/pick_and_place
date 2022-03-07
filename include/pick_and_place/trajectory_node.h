@@ -10,7 +10,7 @@
 #include <pick_and_place/SetTraj.h>
 #include <controller_manager_msgs/ControllerState.h>
 #include <controller_manager_msgs/SwitchController.h>
-
+#include <actionlib/client/simple_action_client.h>
 
 // Utils
 #include <ros/ros.h>
@@ -135,6 +135,25 @@ namespace trajectory{
 
     }
 
+    template<typename T>
+    bool waitForResult(actionlib::SimpleActionClient<T> client){
+
+        bool finished_before_timeout = client.waitForResult(ros::Duration(30.0));
+        if (finished_before_timeout)
+        {
+            auto result = client.getResult(); // forse auto va modificato con un nuovo template type
+
+            if(result->success)
+                std::cout << " Stato operazione : successo \n";
+            else
+                std::cout << " Stato operazione : fallimento \n";
+        }
+        else
+        {
+            std::cout <<"Action did not finish before the time out. \n";
+        }
+        return finished_before_timeout;
+    }
 
    
 }
