@@ -1,0 +1,4 @@
+---
+float64[3] current_position
+float64[4] current_quaternion
+
