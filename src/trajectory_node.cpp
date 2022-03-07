@@ -9,6 +9,7 @@
 
 // Server , Actions
 #include <pick_and_place/SetTraj.h>
+#include <actionlib/client/simple_action_client.h>
 
 // Utils
 #include <ros/ros.h>
@@ -32,6 +33,23 @@
 
 using namespace trajectory;
 
+// Gripper action
+using franka_gripper::GraspAction;
+using GraspClient = actionlib::SimpleActionClient<GraspAction>;
+using franka_gripper::HomingAction;
+using HomingClient = actionlib::SimpleActionClient<HomingAction>;
+using franka_gripper::MoveAction;
+using MoveClient = actionlib::SimpleActionClient<MoveAction>;
+
+/*
+Operazioni svolte dal nodo:
+- Set realtime
+- Esegue homing del gripper 
+- Aziona il controller CartesianPose
+- Comanda goal in cartesiano e aspetta che venga completato.
+- c
+*/
+
 int main(int argc, char **argv)
 {
 
@@ -41,12 +59,40 @@ int main(int argc, char **argv)
     client_set_traj = nh.serviceClient<pick_and_place::SetTraj>("/set_traj");
     ros::Subscriber state_sub = nh.subscribe<franka_msgs::FrankaState>("/franka_state_controller/franka_states", 1, stateCB);
     
+    
+    HomingClient homing_client("/franka_gripper/homing");
+    MoveClient move_client("/franka_gripper/move");
+    GraspClient grasp_client("/franka_gripper/grasp");
+
+
     // Check e set realtime node
     if (!check_realtime()) 
       throw std::runtime_error("REALTIME NOT AVAILABLE");
 
     if (!set_realtime_SCHED_FIFO()) 
         throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
+
+
+    // Homing del gripper
+    homing_client.sendGoal( franka_gripper::HomingGoal());
+
+    // Move gripper ad una certa width
+    franka_gripper::MoveGoal move_goal;
+    move_goal.width = 0.08;
+    move_goal.speed = 0.05;
+    move_client.sendGoal(move_goal);
+    bool finished_before_timeout = move_client.waitForResult(ros::Duration(30.0));
+    if (finished_before_timeout)
+    {
+        actionlib::SimpleClientGoalState state = move_client.getState();
+        ROS_INFO("Action finished: %s", state.toString().c_str());
+    }
+    else
+    {
+        std::cout <<"Action did not finish before the time out. \n";
+    }
+
+
 
 
     // Accensione del controller
@@ -75,6 +121,29 @@ int main(int argc, char **argv)
 
     }
 
-   
+    // Grasp action del gripper 
+    std::cout << "Il gripper sta per chiudere, premere y per continuare \n";
+    char y;
+
+    do{
+        std::cout << "Il gripper sta per chiudere, premere y per continuare o n per chiudere \n";
+        y = getchar();
+        if(y == 'n')
+            return -1;
+
+    }while(y!='y');
+
+    // Parametri dell'azione di grasp
+    franka_gripper::GraspGoal grasp_goal;
+    grasp_goal.width = 0.011; // [m]
+    grasp_goal.speed = 0.05;  // [m/s]
+    grasp_goal.force = 60.0;  // [N]
+    grasp_goal.epsilon.inner = 0.002;
+    grasp_goal.epsilon.outer = 0.002;
+
+    // Invio del comando
+    grasp_client.sendGoal(grasp_goal);
+    grasp_client.waitForResult(ros::Duration(30.0));
+    
     return 0;
 }

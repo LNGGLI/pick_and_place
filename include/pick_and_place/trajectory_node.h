@@ -70,7 +70,7 @@ namespace trajectory{
     }
     
   
-    bool set_goal_and_call_srv(CartesianGoal cartesian_goal){
+    bool set_goal_and_call_srv(const CartesianGoal& cartesian_goal){
         
         pick_and_place::SetTraj set_traj_msg;
 
