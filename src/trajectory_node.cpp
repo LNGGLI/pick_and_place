@@ -42,24 +42,23 @@ int main(int argc, char **argv)
     ros::Subscriber state_sub = nh.subscribe<franka_msgs::FrankaState>("/franka_state_controller/franka_states", 1, stateCB);
     
     // Check e set realtime node
-    if (!check_realtime()) 
-      throw std::runtime_error("REALTIME NOT AVAILABLE");
+    // if (!check_realtime()) 
+    //   throw std::runtime_error("REALTIME NOT AVAILABLE");
 
-    if (!set_realtime_SCHED_FIFO()) 
-        throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
+    // if (!set_realtime_SCHED_FIFO()) 
+    //     throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
 
 
     // Accensione del controller
     bool ok = switch_controller("cartesian_pose_controller", "");
 
 
-    if (ok)
+    if (ok){
         std::cout << "Lo switch del controller è stato effettuato!" << std::endl;
-    else
+    }
+    else{
         std::cout << "Lo switch del controller non è andato a buon fine " << std::endl;
-
-
-
+    }
 
     // Costruzione e invio della posa desiderata 
     goal_position = TooN::makeVector(0.4 , 0.4 , 0.4);
@@ -80,7 +79,7 @@ int main(int argc, char **argv)
         ros::Duration(3).sleep();
 
     }
-
+    
     std::cout << "Il robot ha raggiunto la posa assegnata \n";
         
 

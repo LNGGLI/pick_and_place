@@ -1,6 +1,6 @@
 // Copyright (c) 2017 Franka Emika GmbH
 // Use of this source code is governed by the Apache-2.0 license, see LICENSE
-#include <pick_and_place/cartesian_impedance_controller.h>
+#include <pick_and_place/Controllers/cartesian_impedance_controller.h>
 
 #include <cmath>
 #include <memory>

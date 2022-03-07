@@ -13,7 +13,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED
 
-dynamic_reconfigure
 franka_control
 franka_hw
 franka_gripper
@@ -32,6 +31,7 @@ rospy
 sun_traj_lib
 ros_toon
 sun_robot_lib
+
 )
 
 find_package(Eigen3 REQUIRED)
@@ -80,7 +80,6 @@ find_package(Franka 0.7.0 REQUIRED)
 add_service_files(
   FILES
   SetTraj.srv
-  GetState.srv
 )
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -129,8 +128,26 @@ generate_messages(
 catkin_package(
  INCLUDE_DIRS include
 # LIBRARIES pick_and_place
-#  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
+ CATKIN_DEPENDS 
+  franka_control
+  franka_hw
+  franka_gripper
+  franka_msgs
+  controller_interface
+  eigen_conversions
+  geometry_msgs
+  hardware_interface
+  tf
+  tf_conversions
+  message_generation
+  pluginlib
+  realtime_tools
+  roscpp
+  rospy
+  sun_traj_lib
+  ros_toon
+  sun_robot_lib
+ DEPENDS libfranka
 )
 
 ###########
@@ -152,11 +169,14 @@ include_directories(
 
 ## Declare a C++ library
 add_library(controllers 
-src/cartesian_torque_controller.cpp
-src/cartesian_impedance_controller.cpp
-src/cartesian_pose_controller.cpp
-src/pick_and_place_controller.cpp
+src/Controllers/cartesian_torque_controller.cpp
+src/Controllers/cartesian_impedance_controller.cpp
+src/Controllers/cartesian_pose_controller.cpp
+src/Controllers/pick_and_place_controller.cpp
+
 )
+
+# Dichiarazione libreria "panda" 
 add_library(panda 
 src/Panda.cpp)
 
@@ -170,10 +190,7 @@ target_include_directories(controllers SYSTEM PUBLIC
  ${Franka_INCLUDE_DIRS}
  ${EIGEN3_INCLUDE_DIRS}
  ${catkin_INCLUDE_DIRS}
-)
-
-target_include_directories(controllers PUBLIC
-  include
+ include
 )
 
 
@@ -186,7 +203,9 @@ target_include_directories(controllers PUBLIC
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/pick_and_place_node.cpp)
+
 add_executable(trajectory_node src/trajectory_node.cpp)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
