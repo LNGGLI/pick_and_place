@@ -40,7 +40,7 @@ namespace controllers
     double Tf = req.Tf;
 
     // Lettura posa attuale
-    std::array<double,16> current_pose = cartesian_pose_handle_->getRobotState().O_T_EE_c;
+    std::array<double,16> current_pose = cartesian_pose_handle_->getRobotState().O_T_EE; // Oppure O_T_EE_c
 
     TooN::Matrix<4,4,double> toon_current_pose = TooN::Data(current_pose[0], current_pose[4], current_pose[8], current_pose[12],
                                                     current_pose[1],current_pose[5],current_pose[9],current_pose[13],

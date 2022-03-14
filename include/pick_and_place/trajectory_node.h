@@ -127,7 +127,7 @@ namespace trajectory{
 
         // Calcolo errore
         double delta_p = TooN::norm(current_pos - cartesian_goal.goal_position);
-        double delta_q_norm = TooN::norm( (cartesian_goal.goal_quaternion*current_quat).getV() );
+        double delta_q_norm = TooN::norm( (cartesian_goal.goal_quaternion*inv(current_quat)).getV() );
 
 
         if(delta_p < 0.01 && delta_q_norm < 0.01) 
@@ -135,25 +135,7 @@ namespace trajectory{
 
     }
 
-    template<typename T>
-    bool waitForResult(actionlib::SimpleActionClient<T> client){
-
-        bool finished_before_timeout = client.waitForResult(ros::Duration(30.0));
-        if (finished_before_timeout)
-        {
-            auto result = client.getResult(); // forse auto va modificato con un nuovo template type
-
-            if(result->success)
-                std::cout << " Stato operazione : successo \n";
-            else
-                std::cout << " Stato operazione : fallimento \n";
-        }
-        else
-        {
-            std::cout <<"Action did not finish before the time out. \n";
-        }
-        return finished_before_timeout;
-    }
+    
 
    
 }

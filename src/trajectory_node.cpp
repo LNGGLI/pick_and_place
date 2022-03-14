@@ -10,10 +10,13 @@
 // Server , Actions
 #include <pick_and_place/SetTraj.h>
 #include <actionlib/client/simple_action_client.h>
+#include <franka_gripper/GraspAction.h>
+#include <franka_gripper/HomingAction.h>
+#include <franka_gripper/MoveAction.h>
+#include <franka_gripper/StopAction.h>
 
 // Utils
 #include <ros/ros.h>
-#include <franka_gripper/franka_gripper.h>
 #include <pick_and_place/check_realtime.h>
 
 
@@ -74,15 +77,8 @@ int main(int argc, char **argv)
 
 
     // Homing del gripper
-    homing_client.sendGoal( franka_gripper::HomingGoal());
-    // bool finished_before_timeout = waitForResult(homing_client); provare la template function
-
-    // Move gripper ad una certa width
-    franka_gripper::MoveGoal move_goal;
-    move_goal.width = 0.08;
-    move_goal.speed = 0.05;
-    move_client.sendGoal(move_goal);
-    bool finished_before_timeout = move_client.waitForResult(ros::Duration(30.0));
+    homing_client.sendGoal(franka_gripper::HomingGoal());
+    bool finished_before_timeout = homing_client.waitForResult(ros::Duration(20.0));
     if (finished_before_timeout)
     {
         actionlib::SimpleClientGoalState state = move_client.getState();
@@ -93,8 +89,21 @@ int main(int argc, char **argv)
         std::cout <<"Action did not finish before the time out. \n";
     }
 
-    // finished_before_timeout = waitForResult(move_client); provare la template function
-
+    // Move gripper ad una certa width
+    franka_gripper::MoveGoal move_goal;
+    move_goal.width = 0.08;
+    move_goal.speed = 0.05;
+    move_client.sendGoal(move_goal);
+    finished_before_timeout = move_client.waitForResult(ros::Duration(10.0));
+    if (finished_before_timeout)
+    {
+        actionlib::SimpleClientGoalState state = move_client.getState();
+        ROS_INFO("Action finished: %s", state.toString().c_str());
+    }
+    else
+    {
+        std::cout <<"Action did not finish before the time out. \n";
+    }
 
     // Accensione del controller
     bool success = switch_controller("cartesian_pose_controller", "");
@@ -105,12 +114,12 @@ int main(int argc, char **argv)
     
     // Costruzione e invio della posa desiderata
     TooN::Matrix<3,3,double> goal_R = TooN::Data(1,0,0,
-                                                0,0,1,
-                                                0,-1,0);
+                                                 0,-1,0,
+                                                 0,0,-1);
 
-    cartesian_goal.goal_position = TooN::makeVector(0.4 , 0.4 , 0.4);                               
+    cartesian_goal.goal_position = TooN::makeVector(0.4 , 0.0 , 0.4);                               
     cartesian_goal.goal_quaternion = sun::UnitQuaternion(goal_R);
-    cartesian_goal.Tf = 10; // s 
+    cartesian_goal.Tf = 20; // s 
 
     success = set_goal_and_call_srv(cartesian_goal);
 
@@ -123,7 +132,6 @@ int main(int argc, char **argv)
     }
 
     // Grasp action del gripper 
-    std::cout << "Il gripper sta per chiudere, premere y per continuare \n";
     char y;
 
     do{
@@ -144,7 +152,16 @@ int main(int argc, char **argv)
 
     // Invio del comando
     grasp_client.sendGoal(grasp_goal);
-    grasp_client.waitForResult(ros::Duration(30.0));
-    // finished_before_timeout = waitForResult(grasp_client); provare la template function 
+    finished_before_timeout = grasp_client.waitForResult(ros::Duration(10.0));
+    if (finished_before_timeout)
+    {
+        actionlib::SimpleClientGoalState state = move_client.getState();
+        ROS_INFO("Action finished: %s", state.toString().c_str());
+    }
+    else
+    {
+        std::cout <<"Action did not finish before the time out. \n";
+    }
+
     return 0;
 }
