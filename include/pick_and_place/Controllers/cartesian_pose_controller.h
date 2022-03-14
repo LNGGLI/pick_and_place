@@ -27,7 +27,7 @@
 #include <sun_traj_lib/Line_Segment_Traj.h>
 #include <sun_traj_lib/Rotation_Const_Axis_Traj.h>
 
-namespace controllers {
+namespace PoseController {
 
   // Variabili handlers
   franka_hw::FrankaPoseCartesianInterface* cartesian_pose_interface_;

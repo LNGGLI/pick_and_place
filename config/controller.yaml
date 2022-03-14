@@ -1,5 +1,5 @@
 cartesian_torque_controller:
-    type: controllers/CartesianTorqueController
+    type: TorqueController/CartesianTorqueController
     arm_id: panda
     joint_names:
         - panda_joint1
@@ -29,7 +29,7 @@ cartesian_torque_controller:
     coriolis_factor: 1.0
 
 cartesian_pose_controller:
-    type: controllers/CartesianPoseController
+    type: PoseController/CartesianPoseController
     arm_id: panda
 
 cartesian_impedance_controller:

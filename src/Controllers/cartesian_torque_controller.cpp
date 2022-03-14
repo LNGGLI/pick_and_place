@@ -11,7 +11,7 @@
 
 #include <franka/robot_state.h>
 
-namespace controllers
+namespace TorqueController
 {
 
     bool CartesianTorqueController::init(hardware_interface::RobotHW *robot_hw,
@@ -270,5 +270,5 @@ namespace controllers
 
 } // namespace controllers
 
-PLUGINLIB_EXPORT_CLASS(controllers::CartesianTorqueController,
+PLUGINLIB_EXPORT_CLASS(TorqueController::CartesianTorqueController,
                        controller_interface::ControllerBase)

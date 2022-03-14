@@ -1,6 +1,6 @@
 <library path="lib/libcontrollers">
 
-  <class name="controllers/CartesianTorqueController" type="controllers::CartesianTorqueController" base_class_type="controller_interface::ControllerBase">
+  <class name="TorqueController/CartesianTorqueController" type="TorqueController::CartesianTorqueController" base_class_type="controller_interface::ControllerBase">
     <description>
       Controller che segue una traiettoria in cartesiano calcolando le coppie da applicare 
       ai motori. Utilizza la cinematica inversa interna.
@@ -8,7 +8,7 @@
     </description>
     </class>
 
-    <class name="controllers/CartesianPoseController" type="controllers::CartesianPoseController" base_class_type="controller_interface::ControllerBase">
+    <class name="PoseController/CartesianPoseController" type="PoseController::CartesianPoseController" base_class_type="controller_interface::ControllerBase">
     <description>
         Controller che segue una traiettoria in cartesiano.
     </description>

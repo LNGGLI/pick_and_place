@@ -30,7 +30,7 @@
 
 #include <TooN/TooN.h>
 
-namespace controllers
+namespace PoseController
 {
   bool set_traj(pick_and_place::SetTraj::Request &req, pick_and_place::SetTraj::Response &resp){
     
@@ -184,5 +184,5 @@ namespace controllers
   
 } // namespace controllers
 
-PLUGINLIB_EXPORT_CLASS(controllers::CartesianPoseController,
+PLUGINLIB_EXPORT_CLASS(PoseController::CartesianPoseController,
                        controller_interface::ControllerBase)

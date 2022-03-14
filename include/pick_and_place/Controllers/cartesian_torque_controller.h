@@ -22,7 +22,7 @@
 #include <franka_hw/franka_model_interface.h>
 #include <franka_hw/trigger_rate.h>
 
-namespace controllers {
+namespace TorqueController {
 
 class CartesianTorqueController : public controller_interface::MultiInterfaceController<
                                             franka_hw::FrankaModelInterface,
