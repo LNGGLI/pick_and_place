@@ -128,9 +128,12 @@ namespace trajectory{
         // Calcolo errore
         double delta_p = TooN::norm(current_pos - cartesian_goal.goal_position);
         double delta_q_norm = TooN::norm( (cartesian_goal.goal_quaternion*inv(current_quat)).getV() );
-
-
-        if(delta_p < 0.01 && delta_q_norm < 0.01) 
+        TooN::Vector<7,double> accell;
+        for(int i = 0; i< 7; i++){
+          accell[i] = msg->dq[i];
+        }  
+        double accell_norm = TooN::norm(accell);
+        if(delta_p < 0.01 && delta_q_norm < 0.01 && accell_norm < 0.01) 
             traj_running = false; // La traiettoria può considerarsi terminata
 
     }

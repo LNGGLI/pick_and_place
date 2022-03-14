@@ -34,7 +34,7 @@ bool set_traj(pick_and_place::SetTraj::Request &req,
 
   // Lettura posa attuale
   std::array<double, 16> current_pose =
-      cartesian_pose_handle_->getRobotState().O_T_EE; // Oppure O_T_EE_c
+      cartesian_pose_handle_->getRobotState().O_T_EE_c; // Oppure O_T_EE_c
 
   TooN::Matrix<4, 4, double> toon_current_pose = TooN::Data(
       current_pose[0], current_pose[4], current_pose[8], current_pose[12],
@@ -76,8 +76,10 @@ bool set_traj(pick_and_place::SetTraj::Request &req,
     resp.success = false;
   }
 
+  elapsed_time_ = ros::Duration(0.0);
   return true;
 }
+
 bool CartesianTorqueController::init(hardware_interface::RobotHW *robot_hw,
                                      ros::NodeHandle &node_handle) {
 

@@ -41,7 +41,7 @@ bool set_traj(pick_and_place::SetTraj::Request &req,
 
   // Lettura posa attuale
   std::array<double, 16> current_pose =
-      cartesian_pose_handle_->getRobotState().O_T_EE; // Oppure O_T_EE_c
+      cartesian_pose_handle_->getRobotState().O_T_EE_c; //  O_T_EE_c
 
   TooN::Matrix<4, 4, double> toon_current_pose = TooN::Data(
       current_pose[0], current_pose[4], current_pose[8], current_pose[12],
@@ -82,6 +82,8 @@ bool set_traj(pick_and_place::SetTraj::Request &req,
     std::cout << "Errore nella creazione della traiettoria in \"set_traj\" \n";
     resp.success = false;
   }
+
+  elapsed_time_ = ros::Duration(0.0);
 
   return true;
 }
@@ -130,7 +132,7 @@ bool CartesianPoseController::init(hardware_interface::RobotHW *robot_hardware,
 } // end init
 
 void CartesianPoseController::starting(const ros::Time & /* time */) {
-  pose_ = cartesian_pose_handle_->getRobotState().O_T_EE;
+  pose_ = cartesian_pose_handle_->getRobotState().O_T_EE; // ci vuole O_T_EE
   elapsed_time_ =
       ros::Duration(0.0); // Ogni volta che il controller viene avviato
 }
@@ -138,12 +140,13 @@ void CartesianPoseController::starting(const ros::Time & /* time */) {
 void CartesianPoseController::update(const ros::Time & /* time */,
                                      const ros::Duration &period) {
 
-  elapsed_time_ += period;
+  
   if (!start) { // il controller è partito ma non è stata ancora assegnata
                 // nessuna posa desiderata.
     cartesian_pose_handle_->setCommand(pose_);
   } else {
-
+    
+    elapsed_time_ += period;
     // Posizione
     TooN::Vector<3, double> position =
         cartesian_traj_->getPosition(elapsed_time_.toSec());
