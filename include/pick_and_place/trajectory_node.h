@@ -135,6 +135,18 @@ namespace trajectory{
 
     }
 
+    bool press_y_gripper(){
+      char carattere = 'n';
+
+      while (ros::ok() && carattere != 'y') {
+        std::cout << "Il gripper sta per muoversi, premere y per continuare o "
+                     "n per abortire l'operazione e il programma \n";
+        carattere = getchar();
+        if (carattere == 'n')
+          return false;
+      };
+    }
+
     
 
    

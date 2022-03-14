@@ -77,8 +77,10 @@ int main(int argc, char **argv)
 
 
     // Homing del gripper
+    if(!press_y_gripper()) // premere y per continuare
+        return -1;
     homing_client.sendGoal(franka_gripper::HomingGoal());
-    bool finished_before_timeout = homing_client.waitForResult(ros::Duration(20.0));
+    bool finished_before_timeout = homing_client.waitForResult(ros::Duration(10.0));
     if (finished_before_timeout)
     {
         actionlib::SimpleClientGoalState state = move_client.getState();
@@ -90,6 +92,9 @@ int main(int argc, char **argv)
     }
 
     // Move gripper ad una certa width
+    if(!press_y_gripper()) // premere y per continuare
+        return -1;
+
     franka_gripper::MoveGoal move_goal;
     move_goal.width = 0.08;
     move_goal.speed = 0.05;
@@ -106,7 +111,7 @@ int main(int argc, char **argv)
     }
 
     // Accensione del controller
-    bool success = switch_controller("cartesian_pose_controller", "");
+    bool success = switch_controller("cartesian_torque_controller", "");
     if (!success){
         std::cout << "Lo switch del controller non è andato a buon fine!" << std::endl;
         return -1;
@@ -132,15 +137,8 @@ int main(int argc, char **argv)
     }
 
     // Grasp action del gripper 
-    char y;
-
-    do{
-        std::cout << "Il gripper sta per chiudere, premere y per continuare o n per abortire l'operazione \n";
-        y = getchar();
-        if(y == 'n')
-            return -1;
-
-    }while(y!='y');
+    if(!press_y_gripper()) // premere y per continuare
+        return -1;
 
     // Parametri dell'azione di grasp
     franka_gripper::GraspGoal grasp_goal;
