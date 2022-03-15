@@ -54,10 +54,11 @@ bool traj_running = false; // false se non è in esecuzione nessuna traiettoria
 void wait_movement() {
 
   std::cout << std::endl << "In attesa che il robot raggiunga la posa assegnata";
-  std::cin.clear();
+  
   while (ros::ok() && traj_running) {
-
+    
     std::cout << "..";
+    std::cout.flush();
     ros::spinOnce();
     ros::Duration(3).sleep();
   }
@@ -297,7 +298,7 @@ bool gripper_grasp(double width, double speed, double force, double epsin,
 // Calcola bias sulla misura del wrench
 
 double compute_bias(){
-
+  std::cout << "Calcolo del bias in corso \n";
   const double Ncampioni = 100.0;
   double bias = 0.0; 
   
@@ -309,6 +310,7 @@ double compute_bias(){
     bias += ext_wrench[2];
   }
 
+  std::cout << "Calcolo del bias completato \n";
   return bias/Ncampioni;
 
 }
@@ -349,7 +351,8 @@ bool place_vite(TooN::Vector<3, double> pos, double Tf) {
 
   set_goal_and_call_srv(pose_goal);
   double bias = compute_bias();
-  while(std::norm(ext_wrench[2]) < 1.0) { // Finchè la forza di contatto è minore di 1 N continua a scendere
+  std::cout << "Il bias è: " << bias << "\n";
+  while(std::norm(ext_wrench[2]) - bias < 1.0) { // Finchè la forza di contatto è minore di 1 N continua a scendere
     pose_goal.goal_position -= TooN::makeVector(0.0, 0.0, 0.001);
     pose_goal.Tf = 0.1;
     set_goal_and_call_srv(pose_goal);
