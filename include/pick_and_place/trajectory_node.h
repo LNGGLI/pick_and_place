@@ -53,7 +53,7 @@ bool traj_running = false; // false se non è in esecuzione nessuna traiettoria
 
 void wait_movement() {
 
-  std::cout << std::endl << "In attesa che il robot raggiunga la posa assegnata";
+  std::cout << std::endl << "In attesa che il robot raggiunga la posa assegnata\n";
   ros::Rate loop_rate(30);
   while (ros::ok() && traj_running) {
     
@@ -61,7 +61,7 @@ void wait_movement() {
     loop_rate.sleep();
     
   }
-  std::cout << "\nIl robot ha raggiunto la posa assegnata\n";
+  std::cout << "Il robot ha raggiunto la posa assegnata\n";
 }
 
 bool switch_controller(const std::string &start_controller,
@@ -187,7 +187,7 @@ bool press_y_gripper() {
   char carattere;
 
   while (ros::ok() && carattere != 'y') {
-    std::cout << "Premere y per far muovere il gripper, n per abortire" << std::endl;
+    std::cout << "Premere y per far muovere il gripper, n per abortire " ;
     std::cin >> carattere;
     if (carattere == 'n')
       return false;
@@ -349,10 +349,9 @@ bool place_vite(TooN::Vector<3, double> pos, double Tf) {
   double bias = compute_bias();
   std::cout << "Il bias è: " << bias << "\n";
 
-  while( ext_wrench[2] - bias < 1.0) { // Finchè la forza di contatto è minore di 1 N continua a scendere
-    std::cout << "Scendo di 1 mm \n";  
+  while( ext_wrench[2] - bias < 1.0) { // Finchè la forza di contatto è minore di 1 N continua a scendere 
     pose_goal.goal_position -= TooN::makeVector(0.0, 0.0, 0.0001);
-    pose_goal.Tf = 0.3;
+    pose_goal.Tf = 0.1;
     set_goal_and_call_srv(pose_goal);
     ros::spinOnce();
   }

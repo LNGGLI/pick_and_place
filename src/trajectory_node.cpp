@@ -33,19 +33,19 @@
 using namespace trajectory;
 
 // Posizioni [m]
-TooN::Vector<3, double> High_center = TooN::makeVector(0.4, 0.0, 0.4);
+TooN::Vector<3, double> High_center = TooN::makeVector(0.3, 0.0, 0.3);
 
 TooN::Vector<3, double> BH1_S = TooN::makeVector(
     0.6872160179268519, -0.14076322774510802, 0.022745403230982633);
 
 TooN::Vector<3, double> BH2_S = TooN::makeVector(
-    0.6872160179268519 - 0.07, -0.14076322774510802, 0.022745403230982633);
+    0.617426846065691 , -0.139827712624430  , 0.022430527407691);
 
 TooN::Vector<3, double> BH3_S = TooN::makeVector(
-    0.6872160179268519 - 0.14, -0.14076322774510802, 0.022745403230982633);
+    0.477848502343370 , -0.137956682383073  , 0.021800775761109);
 
 TooN::Vector<3, double> BH4_S = TooN::makeVector(
-    0.6872160179268519 - 0.21, -0.14076322774510802, 0.022745403230982633);
+    0.47784850234337045, -0.13795668238307343, 0.02180077576110917);
 
 TooN::Vector<3, double> BH1_G = TooN::makeVector(
     0.4486985001162725, 0.22299845949006336, 0.02163288252981005 + 0.003);
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
   
 
   // Pick della vite lato filettato
-  if(!pick_vite(BH1_S, 10)){ // 15 [s] 
+  if(!pick_vite(BH2_S, 10)){ // 15 [s] 
     std::cout << "Il robot non è riuscito a raccogliere la vite \n";
     return -1;
   }
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
 
 
   // Place della vite
-  if(!place_vite(BH1_G,10)){ // 15 [s]
+  if(!place_vite(BH2_G,10)){ // 15 [s]
     std::cout << "Il robot non è riuscito a poggiare la vite sul banco \n";
     return -1;
   }
