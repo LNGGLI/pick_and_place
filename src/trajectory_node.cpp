@@ -42,7 +42,7 @@ TooN::Vector<3, double> BH2_S = TooN::makeVector(
     0.617426846065691 , -0.139827712624430  , 0.022430527407691);
 
 TooN::Vector<3, double> BH3_S = TooN::makeVector(
-    0.477848502343370 , -0.137956682383073  , 0.021800775761109);
+    0.547637674204531 , -0.138892197503752  , 0.022115651584400);
 
 TooN::Vector<3, double> BH4_S = TooN::makeVector(
     0.47784850234337045, -0.13795668238307343, 0.02180077576110917);
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
   
 
   // Pick della vite lato filettato
-  if(!pick_vite(BH2_S, 10)){ // 15 [s] 
+  if(!pick_vite(BH3_S, 10)){ // 15 [s] 
     std::cout << "Il robot non è riuscito a raccogliere la vite \n";
     return -1;
   }
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
 
 
   // Place della vite
-  if(!place_vite(BH2_G,10)){ // 15 [s]
+  if(!place_vite(BH3_G,10)){ // 15 [s]
     std::cout << "Il robot non è riuscito a poggiare la vite sul banco \n";
     return -1;
   }
