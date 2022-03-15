@@ -54,15 +54,14 @@ bool traj_running = false; // false se non è in esecuzione nessuna traiettoria
 void wait_movement() {
 
   std::cout << std::endl << "In attesa che il robot raggiunga la posa assegnata";
-  
+  ros::Rate loop_rate(30);
   while (ros::ok() && traj_running) {
     
-    std::cout << "..";
-    std::cout.flush();
     ros::spinOnce();
-    ros::Duration(3).sleep();
+    loop_rate.sleep();
+    
   }
-  std::cout << "\nIl robot ha raggiunto la posa assegnata" << std::endl;
+  std::cout << "\nIl robot ha raggiunto la posa assegnata\n";
 }
 
 bool switch_controller(const std::string &start_controller,
@@ -180,7 +179,7 @@ void stateCB(const franka_msgs::FrankaState::ConstPtr &msg) {
     ext_wrench[i] = msg->K_F_ext_hat_K[i];
   }
 
-  if (delta_p < 0.01 && delta_q_norm < 0.01 && vel_norm < 0.1)
+  if (delta_p < 0.001 && delta_q_norm < 0.001 && vel_norm < 0.001)
     traj_running = false; // La traiettoria può considerarsi terminata
 }
 
@@ -188,8 +187,7 @@ bool press_y_gripper() {
   char carattere;
 
   while (ros::ok() && carattere != 'y') {
-    std::cout << "Il gripper sta per muoversi, premere y per continuare o "
-                 "n per abortire l'operazione e il programma" << std::endl;
+    std::cout << "Premere y per far muovere il gripper, n per abortire" << std::endl;
     std::cin >> carattere;
     if (carattere == 'n')
       return false;
@@ -265,7 +263,6 @@ bool gripper_grasp(double width, double speed, double force, double epsin,
   // Parametri dell'azione di grasp
   GraspClient grasp_client("/franka_gripper/grasp");
   grasp_client.waitForServer();
-  std::cout << "Connesso al gripper server\n";
   franka_gripper::GraspGoal grasp_goal;
   grasp_goal.width = width; // [m]
   grasp_goal.speed = speed; // [m/s]
@@ -287,7 +284,7 @@ bool gripper_grasp(double width, double speed, double force, double epsin,
     }
     return result->success;
   } else {
-    std::cout << "Action did not finish before the time out. \n";
+    std::cout << "Grasp action did not finish before the time out. \n";
     return false;
   }
 
@@ -310,7 +307,6 @@ double compute_bias(){
     bias += ext_wrench[2];
   }
 
-  std::cout << "Calcolo del bias completato \n";
   return bias/Ncampioni;
 
 }
@@ -352,9 +348,11 @@ bool place_vite(TooN::Vector<3, double> pos, double Tf) {
   set_goal_and_call_srv(pose_goal);
   double bias = compute_bias();
   std::cout << "Il bias è: " << bias << "\n";
-  while(std::norm(ext_wrench[2]) - bias < 1.0) { // Finchè la forza di contatto è minore di 1 N continua a scendere
-    pose_goal.goal_position -= TooN::makeVector(0.0, 0.0, 0.001);
-    pose_goal.Tf = 0.1;
+
+  while( ext_wrench[2] - bias < 1.0) { // Finchè la forza di contatto è minore di 1 N continua a scendere
+    std::cout << "Scendo di 1 mm \n";  
+    pose_goal.goal_position -= TooN::makeVector(0.0, 0.0, 0.0001);
+    pose_goal.Tf = 0.3;
     set_goal_and_call_srv(pose_goal);
     ros::spinOnce();
   }

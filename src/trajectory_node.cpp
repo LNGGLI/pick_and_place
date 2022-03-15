@@ -36,10 +36,28 @@ using namespace trajectory;
 TooN::Vector<3, double> High_center = TooN::makeVector(0.4, 0.0, 0.4);
 
 TooN::Vector<3, double> BH1_S = TooN::makeVector(
-    0.6878383541320452, -0.14129504107227095, 0.022850597080517718);
+    0.6872160179268519, -0.14076322774510802, 0.022745403230982633);
+
+TooN::Vector<3, double> BH2_S = TooN::makeVector(
+    0.6872160179268519 - 0.07, -0.14076322774510802, 0.022745403230982633);
+
+TooN::Vector<3, double> BH3_S = TooN::makeVector(
+    0.6872160179268519 - 0.14, -0.14076322774510802, 0.022745403230982633);
+
+TooN::Vector<3, double> BH4_S = TooN::makeVector(
+    0.6872160179268519 - 0.21, -0.14076322774510802, 0.022745403230982633);
 
 TooN::Vector<3, double> BH1_G = TooN::makeVector(
-    0.4492478934831226, 0.22222377189755013, 0.021709117575713865 + 0.010);
+    0.4486985001162725, 0.22299845949006336, 0.02163288252981005 + 0.003);
+
+TooN::Vector<3, double> BH2_G = TooN::makeVector(
+    0.5447036303651978, 0.1477191846817073, 0.022160634657607883 + 0.003);
+
+TooN::Vector<3, double> BH3_G = TooN::makeVector(
+    0.46847657797357173, 0.04301584096398785, 0.02072385873126041 + 0.003);
+
+TooN::Vector<3, double> BH4_G = TooN::makeVector(
+    0.669827234358595, 0.18942833873609624, 0.023672426228587645 + 0.003);    
 
 /*
 Operazioni svolte dal nodo:
@@ -80,6 +98,7 @@ int main(int argc, char **argv) {
     return -1;
   }
 
+  ros::Duration(1.0).sleep();
   
 
   // Pick della vite lato filettato
