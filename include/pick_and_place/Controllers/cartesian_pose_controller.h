@@ -3,6 +3,8 @@
 #pragma once
 #include <pick_and_place/SetTraj.h>
 
+
+#include <mutex>          // std::mutex, std::lock
 #include <array>
 #include <memory>
 #include <string>
@@ -29,6 +31,8 @@
 
 namespace PoseController {
 
+  
+  
   // Variabili handlers
   franka_hw::FrankaPoseCartesianInterface* cartesian_pose_interface_;
   std::unique_ptr<franka_hw::FrankaCartesianPoseHandle> cartesian_pose_handle_;

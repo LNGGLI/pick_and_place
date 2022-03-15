@@ -7,6 +7,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <mutex>          // std::mutex, std::lock
 
 #include <controller_interface/controller_base.h>
 #include <franka_hw/franka_cartesian_command_interface.h>
@@ -28,8 +29,18 @@
 #include <TooN/TooN.h>
 
 namespace PoseController {
+
+
+// Semaforo
+  std::mutex traj_mutex;
+
 bool set_traj(pick_and_place::SetTraj::Request &req,
               pick_and_place::SetTraj::Response &resp) {
+
+
+  // Lock               
+  traj_mutex.lock(); 
+
 
   // Lettura posa finale e tempo della traiettoria
   TooN::Vector<3, double> final_position = TooN::makeVector(
@@ -39,9 +50,9 @@ bool set_traj(pick_and_place::SetTraj::Request &req,
                        req.goal_quaternion.y, req.goal_quaternion.z);
   double Tf = req.Tf;
 
-  // Lettura posa attuale
-  std::array<double, 16> current_pose =
-      cartesian_pose_handle_->getRobotState().O_T_EE_c; //  O_T_EE_c
+  // Lettura posa attuale . provare con pose_
+  std::array<double, 16> current_pose = pose_;
+  // cartesian_pose_handle_->getRobotState().O_T_EE_c; //  
 
   TooN::Matrix<4, 4, double> toon_current_pose = TooN::Data(
       current_pose[0], current_pose[4], current_pose[8], current_pose[12],
@@ -73,6 +84,7 @@ bool set_traj(pick_and_place::SetTraj::Request &req,
                        // fisso nel tempo
   sun::Cartesian_Independent_Traj local_traj(line_traj, quat_traj);
 
+  delete cartesian_traj_;
   cartesian_traj_ = local_traj.clone();
   if (cartesian_traj_ != nullptr) {
     resp.success = true;
@@ -85,6 +97,7 @@ bool set_traj(pick_and_place::SetTraj::Request &req,
 
   elapsed_time_ = ros::Duration(0.0);
 
+  traj_mutex.unlock();
   return true;
 }
 
@@ -132,7 +145,7 @@ bool CartesianPoseController::init(hardware_interface::RobotHW *robot_hardware,
 } // end init
 
 void CartesianPoseController::starting(const ros::Time & /* time */) {
-  pose_ = cartesian_pose_handle_->getRobotState().O_T_EE; // ci vuole O_T_EE
+  pose_ = cartesian_pose_handle_->getRobotState().O_T_EE; // 
   elapsed_time_ =
       ros::Duration(0.0); // Ogni volta che il controller viene avviato
 }
@@ -141,11 +154,11 @@ void CartesianPoseController::update(const ros::Time & /* time */,
                                      const ros::Duration &period) {
 
   
-  if (!start) { // il controller è partito ma non è stata ancora assegnata
-                // nessuna posa desiderata.
+  if (!start || !traj_mutex.try_lock()) { // il controller è partito ma non è stata ancora assegnata
+                // nessuna posa desiderata. Oppure è in corso la scrittura della traiettoria.
     cartesian_pose_handle_->setCommand(pose_);
-  } else {
-    
+  }
+  else {
     elapsed_time_ += period;
     // Posizione
     TooN::Vector<3, double> position =
@@ -183,7 +196,9 @@ void CartesianPoseController::update(const ros::Time & /* time */,
     msg.transforms[0].rotation.z = q.getV()[2];
 
     command_pb_.publish(msg);
+    traj_mutex.unlock();
   }
+ 
 }
 
 } // namespace PoseController
