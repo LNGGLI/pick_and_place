@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<launch>
+
+    <!-- Load dei parametri dei controller -->
+
+    <rosparam command="load" file="$(find pick_and_place)/config/positions.yaml" />
+
+
+    <node name="planner" pkg="pick_and_place" type="trajectory_node" output="screen" />
+
+
+
+
+
+</launch>

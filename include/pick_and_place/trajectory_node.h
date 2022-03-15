@@ -51,6 +51,7 @@ ros::ServiceClient client_set_traj; // Client per srv set_traj
 TooN::Vector<6, double> ext_wrench; // wrench misurato dal robot
 bool traj_running = false; // false se non è in esecuzione nessuna traiettoria
 
+
 void wait_movement() {
 
   std::cout << std::endl << "In attesa che il robot raggiunga la posa assegnata\n";
@@ -290,8 +291,6 @@ bool gripper_grasp(double width, double speed, double force, double epsin,
 
 }
 
-
-
 // Calcola bias sulla misura del wrench
 
 double compute_bias(){
@@ -310,7 +309,6 @@ double compute_bias(){
   return bias/Ncampioni;
 
 }
-
 
 // Pick della vite lato filettato
 bool pick_vite(TooN::Vector<3, double> pos, double Tf) {
@@ -362,5 +360,11 @@ bool place_vite(TooN::Vector<3, double> pos, double Tf) {
   if (!gripper_move(move_width, move_speed))
     return false;
 }
+
+
+
+
+
+
 
 } // namespace trajectory
