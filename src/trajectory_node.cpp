@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
   
 
   // Accensione del controller
-  if (!switch_controller("cartesian_pose_controller", "")) {
+  if (!switch_controller("pick_and_place_controller", "")) {
     std::cout << "Lo switch del controller non è andato a buon fine!"
               << std::endl;
     return -1;
@@ -130,6 +130,12 @@ int main(int argc, char **argv) {
   pose_goal.Tf = 5; // [s]
   set_goal_and_call_srv(pose_goal);
   
-  
+  // Spegnimento del controller
+  if (!switch_controller("", "pick_and_place_controller")) {
+    std::cout << "Lo switch del controller non è andato a buon fine!"
+              << std::endl;
+    return -1;
+  }
+
   return 0;
 }

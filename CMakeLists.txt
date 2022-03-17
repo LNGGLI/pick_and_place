@@ -171,8 +171,8 @@ include_directories(
 add_library(controllers 
 src/Controllers/cartesian_torque_controller.cpp
 src/Controllers/cartesian_impedance_controller.cpp
-src/Controllers/cartesian_pose_controller.cpp
 src/Controllers/pick_and_place_controller.cpp
+
 
 )
 

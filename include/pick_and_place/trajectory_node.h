@@ -296,7 +296,7 @@ bool gripper_grasp(double width, double speed, double force, double epsin,
 
 TooN::Vector<6,double> compute_bias(){
   std::cout << "Calcolo del bias in corso \n";
-  const double Ncampioni = 100.0;
+  const double Ncampioni = 300.0;
   TooN::Vector<6,double> bias = TooN::makeVector(0.0,0.0,0.0,0.0,0.0,0.0); 
   
   // Tempo atteso T = Ncampioni * 1/f_campionamento 

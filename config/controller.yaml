@@ -28,8 +28,8 @@ cartesian_torque_controller:
     publish_rate: 10.0
     coriolis_factor: 1.0
 
-cartesian_pose_controller:
-    type: PoseController/CartesianPoseController
+pick_and_place_controller:
+    type: PickAndPlaceController/PickAndPlaceController
     arm_id: panda
 
 cartesian_impedance_controller:
@@ -44,15 +44,5 @@ cartesian_impedance_controller:
         - panda_joint6
         - panda_joint7
 
-pick_and_place_controller:
-    type: controllers/PickAndPlaceController
-    arm_id: panda
-    joint_names:
-        - panda_joint1
-        - panda_joint2
-        - panda_joint3
-        - panda_joint4
-        - panda_joint5
-        - panda_joint6
-        - panda_joint7
+
     

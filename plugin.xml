@@ -8,9 +8,9 @@
     </description>
     </class>
 
-    <class name="PoseController/CartesianPoseController" type="PoseController::CartesianPoseController" base_class_type="controller_interface::ControllerBase">
+    <class name="PickAndPlaceController/PickAndPlaceController" type="PickAndPlaceController::PickAndPlaceController" base_class_type="controller_interface::ControllerBase">
     <description>
-        Controller che segue una traiettoria in cartesiano.
+        Controller per il pick and place di una vite in cartesiano.
     </description>
     </class>
 
