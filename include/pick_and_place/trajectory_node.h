@@ -54,7 +54,7 @@ bool traj_running = false; // false se non è in esecuzione nessuna traiettoria
 void wait_movement() {
 
   std::cout << std::endl << "In attesa che il robot raggiunga la posa assegnata\n";
-  ros::Rate loop_rate(30);
+  ros::Rate loop_rate(100);
   while (ros::ok() && traj_running) {
     
     ros::spinOnce();
@@ -99,6 +99,7 @@ bool switch_controller(const std::string &start_controller,
   return switch_res.ok;
 }
 
+// Chiama il servizio set_traj e aspetta che la traiettoria venga completata
 bool set_goal_and_call_srv(const CartesianGoal &cartesian_goal) {
 
   pick_and_place::SetTraj set_traj_msg;
@@ -225,8 +226,7 @@ bool gripper_homing() {
 // Move del gripper finchè le dita non sono a distanza width e alla velocità speed
 bool gripper_move(double width, double speed) {
 
-  if (!press_y_gripper()) // premere y per continuare
-    return false;
+  
   MoveClient move_client("/franka_gripper/move");
   move_client.waitForServer();
   franka_gripper::MoveGoal move_goal;
@@ -294,18 +294,25 @@ bool gripper_grasp(double width, double speed, double force, double epsin,
 
 // Calcola bias sulla misura del wrench
 
-double compute_bias(){
+TooN::Vector<6,double> compute_bias(){
   std::cout << "Calcolo del bias in corso \n";
   const double Ncampioni = 100.0;
-  double bias = 0.0; 
+  TooN::Vector<6,double> bias = TooN::makeVector(0.0,0.0,0.0,0.0,0.0,0.0); 
   
   // Tempo atteso T = Ncampioni * 1/f_campionamento 
   // Per N = 100 e f = 30 Hz -> T = 3,33 s!
 
   for(int i = 0; i < Ncampioni; i++){
     ros::spinOnce();
-    bias += ext_wrench[2];
+    for(int k = 0; k < 6; k++)
+      bias[k] += ext_wrench[k];
   }
+
+  std::cout << "Bias calcolato: ";
+  for(int k = 0; k < 6; k++)
+      std::cout << bias[k]/Ncampioni << " ";
+  
+  std::cout << std::endl;
 
   return bias/Ncampioni;
 
@@ -321,6 +328,7 @@ bool pick_vite(TooN::Vector<3, double> pos, double Tf) {
   pose_goal.goal_quaternion = sun::UnitQuaternion(goal_R);
   pose_goal.Tf = Tf; // [s]
 
+  
   set_goal_and_call_srv(pose_goal);
 
 
@@ -346,10 +354,10 @@ bool place_vite(TooN::Vector<3, double> pos, double Tf) {
   pose_goal.Tf = Tf; // [s]
 
   set_goal_and_call_srv(pose_goal);
-  double bias = compute_bias();
-  std::cout << "Il bias è: " << bias << "\n";
+  TooN::Vector<6,double> bias = compute_bias();
+  
 
-  while( ext_wrench[2] - bias < 1.0) { // Finchè la forza di contatto è minore di 1 N continua a scendere 
+  while( TooN::norm(ext_wrench - bias) < 1.0) { // Finchè la forza di contatto è minore di 1 N continua a scendere 
     pose_goal.goal_position -= TooN::makeVector(0.0, 0.0, 0.0001);
     pose_goal.Tf = 0.1;
     set_goal_and_call_srv(pose_goal);

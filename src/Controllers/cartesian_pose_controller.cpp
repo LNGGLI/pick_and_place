@@ -145,7 +145,8 @@ bool CartesianPoseController::init(hardware_interface::RobotHW *robot_hardware,
 } // end init
 
 void CartesianPoseController::starting(const ros::Time & /* time */) {
-  pose_ = cartesian_pose_handle_->getRobotState().O_T_EE; // 
+  pose_ = cartesian_pose_handle_->getRobotState().O_T_EE; //
+  cartesian_pose_handle_->setCommand(pose_); 
   elapsed_time_ =
       ros::Duration(0.0); // Ogni volta che il controller viene avviato
 }
