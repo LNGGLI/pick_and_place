@@ -25,6 +25,7 @@
 // Messages
 #include <TooN/TooN.h>
 #include <franka_msgs/FrankaState.h>
+#include <big_head/Point2DStamped.h>
 
 // Controller manager srv
 using controller_manager_msgs::SwitchControllerRequest;
@@ -40,6 +41,7 @@ using MoveClient = actionlib::SimpleActionClient<MoveAction>;
 
 namespace trajectory {
 
+// Variabili
 struct CartesianGoal {
   TooN::Vector<3, double> goal_position;
   sun::UnitQuaternion goal_quaternion;
@@ -50,6 +52,15 @@ CartesianGoal pose_goal;       // struct per definire il goal in cartesiano
 ros::ServiceClient client_set_traj; // Client per srv set_traj
 TooN::Vector<6, double> ext_wrench; // wrench misurato dal robot
 bool traj_running = false; // false se non è in esecuzione nessuna traiettoria
+TooN::Vector<2, double>  contact_point;
+TooN::Vector<2, double>  force_indicator;
+
+
+
+
+
+// Funzioni
+
 
 void wait_movement() {
 
@@ -184,6 +195,23 @@ void stateCB(const franka_msgs::FrankaState::ConstPtr &msg) {
     traj_running = false; // La traiettoria può considerarsi terminata
 }
 
+void contactCB(const big_head::Point2DStamped::ConstPtr &msg) {
+
+  contact_point[0] = msg->point.x;
+  contact_point[1] = msg->point.y;
+
+}
+
+
+void forceCB(const big_head::Point2DStamped::ConstPtr &msg) {
+
+  force_indicator[0] = msg->point.x;
+  force_indicator[1] = msg->point.y;
+
+}
+
+
+
 bool press_y_gripper() {
   char carattere;
 
@@ -254,29 +282,22 @@ bool gripper_move(double width, double speed) {
 
 // Grasp di un oggetto di larghezza width con velocità speed e forza force. 
 // Epsin e Epsout sono valori di tolleranza sulla larghezza dell'oggetto da graspare.
-bool gripper_grasp(double width, double speed, double force, double epsin,
-                   double epsout) {
+bool gripper_grasp(double width, double speed, double force) {
 
   if (!press_y_gripper()) // premere y per continuare
     return false;
 
-  // Parametri dell'azione di grasp
-  GraspClient grasp_client("/franka_gripper/grasp");
-  grasp_client.waitForServer();
-  franka_gripper::GraspGoal grasp_goal;
-  grasp_goal.width = width; // [m]
-  grasp_goal.speed = speed; // [m/s]
-  grasp_goal.force = force; // [N]
-  grasp_goal.epsilon.inner = epsin;
-  grasp_goal.epsilon.outer = epsout;
+  MoveClient move_client("/franka_gripper/move");
+  move_client.waitForServer();
+  franka_gripper::MoveGoal move_goal;
+  move_goal.width = width;
+  move_goal.speed = speed;
 
-  // Invio del comando
-  grasp_client.sendGoal(grasp_goal);
-  bool finished_before_timeout =
-      grasp_client.waitForResult(ros::Duration(10.0));
+  move_client.sendGoal(move_goal);
+  bool finished_before_timeout = move_client.waitForResult(ros::Duration(10.0));
 
   if (finished_before_timeout) {
-    franka_gripper::GraspResultConstPtr result = grasp_client.getResult();
+    franka_gripper::MoveResultConstPtr result = move_client.getResult();
     if (result->success == true) {
       std::cout << "Grasp avvenuto correttamente \n";
     } else {
@@ -290,35 +311,6 @@ bool gripper_grasp(double width, double speed, double force, double epsin,
 
 }
 
-
-
-// Calcola bias sulla misura del wrench
-
-TooN::Vector<6,double> compute_bias(){
-  std::cout << "Calcolo del bias in corso \n";
-  const double Ncampioni = 300.0;
-  TooN::Vector<6,double> bias = TooN::makeVector(0.0,0.0,0.0,0.0,0.0,0.0); 
-  
-  // Tempo atteso T = Ncampioni * 1/f_campionamento 
-  // Per N = 100 e f = 30 Hz -> T = 3,33 s!
-
-  for(int i = 0; i < Ncampioni; i++){
-    ros::spinOnce();
-    for(int k = 0; k < 6; k++)
-      bias[k] += ext_wrench[k];
-  }
-
-  std::cout << "Bias calcolato: ";
-  for(int k = 0; k < 6; k++)
-      std::cout << bias[k]/Ncampioni << " ";
-  
-  std::cout << std::endl;
-
-  return bias/Ncampioni;
-
-}
-
-
 // Pick della vite lato filettato
 bool pick_vite(TooN::Vector<3, double> pos, double Tf) {
 
@@ -331,18 +323,16 @@ bool pick_vite(TooN::Vector<3, double> pos, double Tf) {
   
   set_goal_and_call_srv(pose_goal);
 
-
   // Grasp action del gripper lato filettato
   
-  double grasp_width = 0.004;  // [m]
-  double grasp_speed = 0.05;   // [m/s]
+  double grasp_width = 0.006;  // [m]
+  double grasp_speed = 0.03;   // [m/s]
   double grasp_force = 60.0;   // [N]
-  double grasp_epsin = 0.001;  // [m]
-  double grasp_epsout = 0.001; // [m]
+  
 
-  if (!gripper_grasp(grasp_width, grasp_speed, grasp_force, grasp_epsin,
-                     grasp_epsout))
+  if (!gripper_grasp(grasp_width, grasp_speed, grasp_force))
     return false;
+
 }
 
 // Place della vite
@@ -354,10 +344,8 @@ bool place_vite(TooN::Vector<3, double> pos, double Tf) {
   pose_goal.Tf = Tf; // [s]
 
   set_goal_and_call_srv(pose_goal);
-  TooN::Vector<6,double> bias = compute_bias();
   
-
-  while( TooN::norm(ext_wrench - bias) < 1.0) { // Finchè la forza di contatto è minore di 1 N continua a scendere 
+  while( TooN::norm(force_indicator) < 1.0 ) { // Finchè la forza di contatto è minore di 1 N continua a scendere 
     pose_goal.goal_position -= TooN::makeVector(0.0, 0.0, 0.0001);
     pose_goal.Tf = 0.1;
     set_goal_and_call_srv(pose_goal);
@@ -370,5 +358,8 @@ bool place_vite(TooN::Vector<3, double> pos, double Tf) {
   if (!gripper_move(move_width, move_speed))
     return false;
 }
+
+
+
 
 } // namespace trajectory

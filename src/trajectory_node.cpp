@@ -23,6 +23,7 @@
 #include <sun_math_toolbox/UnitQuaternion.h>
 
 // Messages
+#include <big_head/Point2DStamped.h>
 #include <franka_msgs/FrankaState.h>
 #include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 
@@ -38,11 +39,11 @@ TooN::Vector<3, double> High_center = TooN::makeVector(0.5, 0.0, 0.3);
 TooN::Vector<3, double> BH1_S = TooN::makeVector(
     0.6872160179268519, -0.14076322774510802, 0.022745403230982633);
 
-TooN::Vector<3, double> BH2_S = TooN::makeVector(
-    0.617426846065691 , -0.139827712624430  , 0.022430527407691);
+TooN::Vector<3, double> BH2_S =
+    TooN::makeVector(0.617426846065691, -0.139827712624430, 0.022430527407691);
 
-TooN::Vector<3, double> BH3_S = TooN::makeVector(
-    0.547637674204531 , -0.138892197503752  , 0.022115651584400);
+TooN::Vector<3, double> BH3_S =
+    TooN::makeVector(0.547637674204531, -0.138892197503752, 0.022115651584400);
 
 TooN::Vector<3, double> BH4_S = TooN::makeVector(
     0.47784850234337045, -0.13795668238307343, 0.02180077576110917);
@@ -57,13 +58,9 @@ TooN::Vector<3, double> BH3_G = TooN::makeVector(
     0.46847657797357173, 0.04301584096398785, 0.02072385873126041 + 0.002);
 
 TooN::Vector<3, double> BH4_G = TooN::makeVector(
-    0.669827234358595, 0.18942833873609624, 0.023672426228587645 + 0.002);    
+    0.669827234358595, 0.18942833873609624, 0.023672426228587645 + 0.002);
 
-
-TooN::Matrix<3, 3, double> goal_R = TooN::Data(1, 0, 0,
-                                                 0, -1, 0,
-                                                 0, 0, -1);
-
+TooN::Matrix<3, 3, double> goal_R = TooN::Data(1, 0, 0, 0, -1, 0, 0, 0, -1);
 
 int main(int argc, char **argv) {
 
@@ -71,9 +68,15 @@ int main(int argc, char **argv) {
   ros::NodeHandle nh;
 
   client_set_traj = nh.serviceClient<pick_and_place::SetTraj>("/set_traj");
-  
+
   ros::Subscriber state_sub = nh.subscribe<franka_msgs::FrankaState>(
       "/franka_state_controller/franka_states", 1, stateCB);
+
+  ros::Subscriber contact_sub = nh.subscribe<big_head::Point2DStamped>(
+      "/contact_point_F110", 1, contactCB);
+
+  ros::Subscriber force_sub = nh.subscribe<big_head::Point2DStamped>(
+      "/force_indicator_F110", 1, forceCB);
 
   // Check e set realtime node
   if (!check_realtime())
@@ -82,8 +85,6 @@ int main(int argc, char **argv) {
   if (!set_realtime_SCHED_FIFO())
     throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
 
-  
-
   // Accensione del controller
   if (!switch_controller("pick_and_place_controller", "")) {
     std::cout << "Lo switch del controller non è andato a buon fine!"
@@ -91,33 +92,30 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  //Homing gripper
-  // if (!gripper_homing())
-    // return -1;
- 
-
-  
-  double width = 0.07;
-  double speed = 0.05;
-  gripper_move(width, speed);
-
-  // Pick della vite lato filettato
-  if(!pick_vite(BH1_S, 10)){ // 10 [s] 
-    std::cout << "Il robot non è riuscito a raccogliere la vite \n";
+  // Homing gripper
+  if (!gripper_homing())
     return -1;
-  }
-    
 
   // Movimento del robot in alto al centro
-  
   pose_goal.goal_position = High_center;
   pose_goal.goal_quaternion = sun::UnitQuaternion(goal_R);
   pose_goal.Tf = 5; // [s]
   set_goal_and_call_srv(pose_goal);
 
+  // Pick della vite lato filettato
+  if (!pick_vite(BH1_S, 10)) { // 10 [s]
+    std::cout << "Il robot non è riuscito a raccogliere la vite \n";
+    return -1;
+  }
+
+  // Movimento del robot in alto al centro
+  pose_goal.goal_position = High_center;
+  pose_goal.goal_quaternion = sun::UnitQuaternion(goal_R);
+  pose_goal.Tf = 5; // [s]
+  set_goal_and_call_srv(pose_goal);
 
   // Place della vite
-  if(!place_vite(BH1_G,10)){ // 15 [s]
+  if (!place_vite(BH1_G, 10)) { // 15 [s]
     std::cout << "Il robot non è riuscito a poggiare la vite sul banco \n";
     return -1;
   }
@@ -127,16 +125,13 @@ int main(int argc, char **argv) {
   pose_goal.goal_quaternion = sun::UnitQuaternion(goal_R);
   pose_goal.Tf = 5; // [s]
   set_goal_and_call_srv(pose_goal);
-  
+
   // Spegnimento del controller
   if (!switch_controller("", "pick_and_place_controller")) {
     std::cout << "Lo switch del controller non è andato a buon fine!"
               << std::endl;
     return -1;
   }
-
-  
-
 
   return 0;
 }

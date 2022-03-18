@@ -59,8 +59,10 @@ ros::ServiceClient client_set_traj; // Client per srv set_traj
 TooN::Vector<6, double> ext_wrench; // wrench misurato dal robot
 bool traj_running = false; // false se non è in esecuzione nessuna traiettoria
 TooN::Vector<3, double> current_pos_;
-
 TooN::Vector<2, double>  measured_contact_point_;
+
+
+
 
 void wait_movement() {
 
