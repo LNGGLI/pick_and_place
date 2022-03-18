@@ -345,7 +345,7 @@ bool place_vite(TooN::Vector<3, double> pos, double Tf) {
 
   set_goal_and_call_srv(pose_goal);
   
-  while( TooN::norm(force_indicator) < 1.0 ) { // Finchè la forza di contatto è minore di 1 N continua a scendere 
+  while( TooN::norm(force_indicator) < 0.3 ) { // Finchè la forza di contatto è minore di 1 N continua a scendere 
     pose_goal.goal_position -= TooN::makeVector(0.0, 0.0, 0.0001);
     pose_goal.Tf = 0.1;
     set_goal_and_call_srv(pose_goal);

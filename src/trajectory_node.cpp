@@ -92,9 +92,9 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  // Homing gripper
-  if (!gripper_homing())
-    return -1;
+  // // Homing gripper
+  // if (!gripper_homing())
+  //   return -1;
 
   // Movimento del robot in alto al centro
   pose_goal.goal_position = High_center;
