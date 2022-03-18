@@ -50,8 +50,6 @@ TooN::Vector<3, double> BH4_S = TooN::makeVector(
 TooN::Vector<3, double> BH1_G = TooN::makeVector(
     0.4486985001162725, 0.22299845949006336, 0.02163288252981005 + 0.002);
 
-
-
 TooN::Vector<3, double> BH2_G = TooN::makeVector(
     0.5447036303651978, 0.1477191846817073, 0.022160634657607883 + 0.002);
 
@@ -136,6 +134,9 @@ int main(int argc, char **argv) {
               << std::endl;
     return -1;
   }
+
+  
+
 
   return 0;
 }
