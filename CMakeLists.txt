@@ -208,6 +208,8 @@ add_executable(trajectory_node src/trajectory_node.cpp)
 
 add_executable(calibration_node src/calibration_node.cpp)
 
+add_executable(training_node src/training_node.cpp)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -230,7 +232,11 @@ add_executable(calibration_node src/calibration_node.cpp)
 
  target_link_libraries(calibration_node
  ${catkin_LIBRARIES}
- panda
+ 
+)
+
+target_link_libraries(training_node
+${catkin_LIBRARIES}
 )
 
 #############

@@ -25,6 +25,7 @@
 // Messages
 #include <big_head/Point2DStamped.h>
 #include <franka_msgs/FrankaState.h>
+#include <read_sensor/tactile_sensor_data.h>
 #include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 
 /* rosbag record /jointsIK /cartesian_trajectory_command
@@ -34,8 +35,9 @@
 using namespace training;
 
 TooN::Vector<3,double> High_center = TooN::makeVector(0.4 , 0.0 , 0.3);
-TooN::Matrix<3,3,double> goal_R = TooN::Zeros;
-TooN::Vector<3,double> pos_vite = TooN::makeVector(0.4 , 0.0 , 0.3);
+TooN::Matrix<3,3,double> R_goal = TooN::Data(0.9990665218011184, 0.022069203201755205, 0.03687557956138249,
+                                             0.022390851950689683, -0.9997049403530613, 0.009150377310790811,
+                                             0.036680807874768476,  0.009150377310790811, -0.9992851251827242);
 
 int main(int argc, char **argv) {
 
@@ -47,6 +49,8 @@ int main(int argc, char **argv) {
   ros::Subscriber state_sub = nh.subscribe<franka_msgs::FrankaState>(
       "/franka_state_controller/franka_states", 1, stateCB);
 
+  ros::Subscriber tactile_sub = nh.subscribe<read_sensor::tactile_sensor_data>(
+      "/TactileData_dev_ttyUSB0_F110", 1, tactileCB);
 
   ros::Subscriber force_sub = nh.subscribe<big_head::Point2DStamped>(
       "/force_indicator_F110", 1, forceCB);
@@ -71,7 +75,7 @@ int main(int argc, char **argv) {
 
   // Movimento del robot in alto al centro
   pose_goal.goal_position = High_center;
-  pose_goal.goal_quaternion = sun::UnitQuaternion(goal_R);
+  pose_goal.goal_quaternion = sun::UnitQuaternion(R_goal);
   pose_goal.Tf = 5; // [s]
   set_goal_and_call_srv(pose_goal);
 
