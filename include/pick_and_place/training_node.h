@@ -55,10 +55,11 @@ bool traj_running = false; // false se non è in esecuzione nessuna traiettoria
 TooN::Vector<2, double> contact_point;
 TooN::Vector<2, double> force_indicator;
 
-TooN::Matrix<3,3,double> R_vite = TooN::Data(0.9990665218011184, 0.022069203201755205, 0.03687557956138249,
-                                             0.022390851950689683, -0.9997049403530613, 0.009150377310790811,
-                                             0.036680807874768476,  0.009150377310790811, -0.9992851251827242);
-TooN::Vector<3,double> pos_vite = TooN::makeVector(0.4 , 0.0 , 0.3);
+TooN::Matrix<3,3,double> R_vite = TooN::Data(0.9992015325089199, 0.01580575242573673, 0.0364314160708723,
+                                             0.016179945874301216, -0.9998094667944435, -0.00999941428324648,
+                                             0.036266426409821945,  0.01058088841616233, -0.9992861270112097);
+ 
+TooN::Vector<3,double> pos_vite = TooN::makeVector(0.5609167289621934, 0.3418667768627687, 0.02566054272474297+0.002);
 double tactile_data[25];
 
 
@@ -352,7 +353,7 @@ bool place_vite(const TooN::Vector<3, double> &pos,const sun::UnitQuaternion &q,
   set_goal_and_call_srv(pose_goal);
 
   TooN::Vector<2, double> bias = compute_bias_tattile();
-  while (TooN::norm(force_indicator - bias) < 0.3) {
+  while (TooN::norm(force_indicator - bias) < 0.2) {
     std::cout << "Norm force indicator: " << TooN::norm(force_indicator - bias)
               << "\n";
     pose_goal.goal_position -= TooN::makeVector(0.0, 0.0, 0.0001);
@@ -369,7 +370,7 @@ bool place_vite(const TooN::Vector<3, double> &pos,const sun::UnitQuaternion &q,
 }
 
 
-bool start_training(TooN::Vector<3, double> &pos, sun::UnitQuaternion &q,  double &Tf){
+bool start_training(){
     
   const char *path_dataset = "Dataset.txt";
   std::ofstream dataset(path_dataset);
@@ -432,10 +433,10 @@ bool start_training(TooN::Vector<3, double> &pos, sun::UnitQuaternion &q,  doubl
                 // x_contact = - 0.005, y_contact = + 0.006 , angle = + theta 
                 
                 
-                desired_quat = sun::UnitQuaternion(R_vite * sun::roty(current_angle)); 
+                desired_quat = sun::UnitQuaternion(sun::roty(current_angle*180/M_PI) * R_vite); 
                 
                 // Pick della vite
-                if (!pick_vite(desired_pos, desired_quat, Tf, current_width)) {
+                if (!pick_vite(desired_pos, desired_quat, 1.0, current_width)) {
                   std::cout
                       << "Il robot non è riuscito a raccogliere la vite \n";
                   return -1;
@@ -449,26 +450,33 @@ bool start_training(TooN::Vector<3, double> &pos, sun::UnitQuaternion &q,  doubl
 
                 // Lettura dei sensori
                 ros::spinOnce();
-                dataset << delta_x[x_index] << " "<< delta_y[y_index] << " "<< current_angle
-                        << " "<< current_width << " "<< tactile_data << "\n";
+                dataset << delta_x[x_index] << " " << delta_y[y_index] << " "
+                        << current_angle << " " << current_width << " ";
+                for (int i = 0; i < 25; i++)
+                  dataset << tactile_data[i] << " ";
 
+                dataset << "\n";
               } 
               else if (width_index < move_width_samples) {
                 // If the screw has already been grasped you can grasp with a different width
                 // without placing the screw down 
 
-                current_width = width + width_index * 0.001;
+                current_width = width - width_index * 0.001;
                 gripper_grasp(current_width, 0.03); // [m] , [m/s]
                 ros::spinOnce();
                 dataset << delta_x[x_index] << " "<< delta_y[y_index] << " "<< current_angle
-                        << " "<< current_width << " "<< tactile_data << "\n";
+                        << " "<< current_width << " ";
+                for(int i = 0 ; i < 25; i++)
+                    dataset << tactile_data[i] << " ";
+
+                dataset << "\n";            
 
               } 
               
               else {
 
                 // If you get to the last width index you just need to place the screw down
-                if (!place_vite(desired_pos, desired_quat, Tf)) { // [s]
+                if (!place_vite(desired_pos, desired_quat, 1.0)) { // [s]
                   std::cout << "Il robot non è riuscito a poggiare la vite sul "
                                "banco \n";
                   return -1;

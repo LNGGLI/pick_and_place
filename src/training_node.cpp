@@ -1,5 +1,6 @@
 
 #include <cmath>
+#include <math.h>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -34,10 +35,7 @@
 
 using namespace training;
 
-TooN::Vector<3,double> High_center = TooN::makeVector(0.4 , 0.0 , 0.3);
-TooN::Matrix<3,3,double> R_goal = TooN::Data(0.9990665218011184, 0.022069203201755205, 0.03687557956138249,
-                                             0.022390851950689683, -0.9997049403530613, 0.009150377310790811,
-                                             0.036680807874768476,  0.009150377310790811, -0.9992851251827242);
+TooN::Vector<3,double> High_center = TooN::makeVector(0.4 , 0.3 , 0.3);
 
 int main(int argc, char **argv) {
 
@@ -69,26 +67,35 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  // // Homing gripper
-  // if (!gripper_homing())
-  //   return -1;
+
 
   // Movimento del robot in alto al centro
   pose_goal.goal_position = High_center;
-  pose_goal.goal_quaternion = sun::UnitQuaternion(R_goal);
+  pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite);
   pose_goal.Tf = 5; // [s]
   set_goal_and_call_srv(pose_goal);
 
 
-  
+  pose_goal.goal_position = High_center;
+  pose_goal.goal_quaternion = sun::UnitQuaternion( sun::roty(5*M_PI/180)* R_vite);
+  pose_goal.Tf = 3; // [s]
+  set_goal_and_call_srv(pose_goal);
+
+
+  pose_goal.goal_position = High_center;
+  pose_goal.goal_quaternion = sun::UnitQuaternion( sun::roty(10*M_PI/180)* R_vite);
+  pose_goal.Tf = 3; // [s]
+  set_goal_and_call_srv(pose_goal);
+
+  pose_goal.goal_position = High_center;
+  pose_goal.goal_quaternion = sun::UnitQuaternion( sun::roty(15*M_PI/180)* R_vite);
+  pose_goal.Tf = 3; // [s]
+  set_goal_and_call_srv(pose_goal);
+
+  // start_training();
   
 
-  // Spegnimento del controller
-  if (!switch_controller("", "pick_and_place_controller")) {
-    std::cout << "Lo switch del controller non è andato a buon fine!"
-              << std::endl;
-    return -1;
-  }
+  
 
   return 0;
 }
