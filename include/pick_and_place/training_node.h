@@ -24,22 +24,20 @@
 
 // Messages
 #include <TooN/TooN.h>
-#include <franka_msgs/FrankaState.h>
 #include <big_head/Point2DStamped.h>
+#include <franka_msgs/FrankaState.h>
 
 // Controller manager srv
 using controller_manager_msgs::SwitchControllerRequest;
 using controller_manager_msgs::SwitchControllerResponse;
 
 // Gripper action
-using franka_gripper::GraspAction;
-using GraspClient = actionlib::SimpleActionClient<GraspAction>;
 using franka_gripper::HomingAction;
 using HomingClient = actionlib::SimpleActionClient<HomingAction>;
 using franka_gripper::MoveAction;
 using MoveClient = actionlib::SimpleActionClient<MoveAction>;
 
-namespace trajectory {
+namespace training {
 
 // Variabili
 struct CartesianGoal {
@@ -48,28 +46,24 @@ struct CartesianGoal {
   double Tf;
 };
 
-CartesianGoal pose_goal;       // struct per definire il goal in cartesiano
+CartesianGoal pose_goal;            // struct per definire il goal in cartesiano
 ros::ServiceClient client_set_traj; // Client per srv set_traj
 TooN::Vector<6, double> ext_wrench; // wrench misurato dal robot
 bool traj_running = false; // false se non è in esecuzione nessuna traiettoria
-TooN::Vector<2, double>  force_indicator;
-
-
-
-
+TooN::Vector<2, double> contact_point;
+TooN::Vector<2, double> force_indicator;
 
 // Funzioni
 
-
 void wait_movement() {
 
-  std::cout << std::endl << "In attesa che il robot raggiunga la posa assegnata\n";
+  std::cout << std::endl
+            << "In attesa che il robot raggiunga la posa assegnata\n";
   ros::Rate loop_rate(100);
   while (ros::ok() && traj_running) {
-    
+
     ros::spinOnce();
     loop_rate.sleep();
-    
   }
   std::cout << "Il robot ha raggiunto la posa assegnata\n";
 }
@@ -198,22 +192,18 @@ void forceCB(const big_head::Point2DStamped::ConstPtr &msg) {
 
   force_indicator[0] = msg->point.x;
   force_indicator[1] = msg->point.y;
-
 }
-
-
 
 bool press_y_gripper() {
   char carattere;
 
   while (ros::ok() && carattere != 'y') {
-    std::cout << "Premere y per far muovere il gripper, n per abortire " ;
+    std::cout << "Premere y per far muovere il gripper, n per abortire ";
     std::cin >> carattere;
     if (carattere == 'n')
       return false;
-    
+
     std::cin.clear();
-    
   };
 }
 
@@ -242,10 +232,10 @@ bool gripper_homing() {
   }
 }
 
-// Move del gripper finchè le dita non sono a distanza width e alla velocità speed
-bool gripper_move(double width, double speed) {
+// Move del gripper finchè le dita non sono a distanza width e alla velocità
+// speed
+bool gripper_move(const double &width,const double &speed) {
 
-  
   MoveClient move_client("/franka_gripper/move");
   move_client.waitForServer();
   franka_gripper::MoveGoal move_goal;
@@ -268,15 +258,13 @@ bool gripper_move(double width, double speed) {
     std::cout << "Move action did not finish before the time out. \n";
     return false;
   }
-  
 }
 
-// Grasp di un oggetto di larghezza width con velocità speed e forza force. 
-// Epsin e Epsout sono valori di tolleranza sulla larghezza dell'oggetto da graspare.
-bool gripper_grasp(double width, double speed) {
+// Grasp di un oggetto di larghezza width con velocità speed e forza force.
+// Epsin e Epsout sono valori di tolleranza sulla larghezza dell'oggetto da
+// graspare.
+bool gripper_grasp(const double &width,const double &speed) {
 
-  if (!press_y_gripper()) // premere y per continuare
-    return false;
 
   MoveClient move_client("/franka_gripper/move");
   move_client.waitForServer();
@@ -299,40 +287,33 @@ bool gripper_grasp(double width, double speed) {
     std::cout << "Grasp action did not finish before the time out. \n";
     return false;
   }
-
 }
 
 // Pick della vite lato filettato
-bool pick_vite(TooN::Vector<3, double> pos, double Tf) {
+bool pick_vite(const TooN::Vector<3, double> &pos,const  sun::UnitQuaternion &q,const double &Tf, const double &width) {
 
-  
-  TooN::Matrix<3, 3, double> goal_R = TooN::Data(1, 0, 0, 0, -1, 0, 0, 0, -1);
   pose_goal.goal_position = pos;
-  pose_goal.goal_quaternion = sun::UnitQuaternion(goal_R);
+  pose_goal.goal_quaternion = q;
   pose_goal.Tf = Tf; // [s]
 
-  
   set_goal_and_call_srv(pose_goal);
 
   // Grasp action del gripper lato filettato
-  
-  double grasp_width = 0.006;  // [m]
-  double grasp_speed = 0.03;   // [m/s]
-  
+
+  double grasp_width = width; // 0.006[m]
+  double grasp_speed = 0.03;  // [m/s]
   
 
   if (!gripper_grasp(grasp_width, grasp_speed))
     return false;
-
 }
 
+TooN::Vector<2, double> compute_bias_tattile() {
 
-TooN::Vector<2,double> compute_bias_tattile(){
-
-  TooN::Vector<2,double> bias = TooN::Zeros;
+  TooN::Vector<2, double> bias = TooN::Zeros;
   int Ncampioni = 100;
   ros::Rate lr(500);
-  for(int i = 0 ; i < Ncampioni ; i++){
+  for (int i = 0; i < Ncampioni; i++) {
     ros::spinOnce();
     bias = bias + force_indicator;
     lr.sleep();
@@ -340,11 +321,11 @@ TooN::Vector<2,double> compute_bias_tattile(){
 
   std::cout << "Force indicator bias computed \n";
 
-  return bias/Ncampioni;
+  return bias / Ncampioni;
 }
 
 // Place della vite
-bool place_vite(TooN::Vector<3, double> pos, double Tf) {
+bool place_vite(const TooN::Vector<3, double> &pos,const sun::UnitQuaternion &q, const  double &Tf) {
 
   TooN::Matrix<3, 3, double> goal_R = TooN::Data(1, 0, 0, 0, -1, 0, 0, 0, -1);
   pose_goal.goal_position = pos;
@@ -352,10 +333,11 @@ bool place_vite(TooN::Vector<3, double> pos, double Tf) {
   pose_goal.Tf = Tf; // [s]
 
   set_goal_and_call_srv(pose_goal);
-  
-  TooN::Vector<2,double> bias = compute_bias_tattile();
-  while( TooN::norm(force_indicator - bias) < 0.3 ) { 
-    std::cout << "Norm force indicator: " << TooN::norm(force_indicator - bias) << "\n";
+
+  TooN::Vector<2, double> bias = compute_bias_tattile();
+  while (TooN::norm(force_indicator - bias) < 0.3) {
+    std::cout << "Norm force indicator: " << TooN::norm(force_indicator - bias)
+              << "\n";
     pose_goal.goal_position -= TooN::makeVector(0.0, 0.0, 0.0001);
     pose_goal.Tf = 0.1;
     set_goal_and_call_srv(pose_goal);
@@ -370,4 +352,106 @@ bool place_vite(TooN::Vector<3, double> pos, double Tf) {
 }
 
 
-} // namespace trajectory
+bool start_training(TooN::Vector<3, double> &pos, sun::UnitQuaternion &q,  double &Tf){
+  
+  
+  const double lunghezza_tattile = 0.0142;
+  int x_samples = 10;
+  int y_samples = 5;
+  const double x_distance = lunghezza_tattile / x_samples;
+  const double y_distance = (lunghezza_tattile/2 - 0.001) / y_samples;
+  const TooN::Vector<6,double> angles = TooN::makeVector(0.0, 5.0 , 10.0 , 15.0 , 20.0 , 25.0);
+  double current_angle = 0.0;
+  const double width = 0.005;
+  double current_width = width;
+  const int move_width_samples = 1; 
+  
+
+  // Move the robot so that the screw's head touches the pad at (tactile frame): 
+  // x = - 0.071 
+  // y = + 0.001 
+  TooN::Vector<3,double> current_pos = pos_vite + TooN::makeVector( (lunghezza_tattile / 2.0), 0.0, 0.001 );
+  TooN::Matrix<3,3,double> current_orient = goal_R;
+  
+  pose_goal.goal_position = current_pos;
+  pose_goal.goal_quaternion = sun::UnitQuaternion(current_orient);
+  pose_goal.Tf = 10.0;
+  set_goal_and_call_srv(pose_goal);  
+  
+
+
+  // Begin training loop
+    
+  
+  //Positive rotation along the y axis (base frame)
+  for (int x_index = 0; x_index < x_samples && ros::ok(); x_index++) {
+
+    for (int y_index = 0; y_index < y_samples && ros::ok(); y_index++) {
+
+        // The higher the contact point the wider the range of angles
+        // we can use to grasp the screw.
+
+        for(int angle_index = 0; angle_index <= y_index && ros::ok(); angle_index++){
+
+            for (int width_index = 0; width_index < move_width_samples && ros::ok();
+                width_index++) {
+
+              if (width_index == 0) {
+
+                current_pos =
+                    pos_vite - TooN::makeVector(x_index * x_distance, 0.0,
+                                                y_index * y_distance);
+
+                current_width = width + width_index * 0.001;
+                // Pick della vite
+                if (!pick_vite(current_pos, q, Tf, current_width)) {
+                  std::cout
+                      << "Il robot non è riuscito a raccogliere la vite \n";
+                  return -1;
+                }
+
+                // Movimento del robot per alzare la vite
+                pose_goal.goal_position = High_center;
+                pose_goal.goal_quaternion = sun::UnitQuaternion(goal_R);
+                pose_goal.Tf = 5; // [s]
+                set_goal_and_call_srv(pose_goal);
+
+              } 
+              else if (width_index < move_width_samples) {
+                // If the screw has already been grasped you can grasp again
+                // without placing the screw
+
+                current_width = width + width_index * 0.001;
+                gripper_grasp(current_width, 0.03); // [m] , [m/s]
+                ros::spinOnce();
+                // TODO: salvataggio su file
+
+              } 
+              
+              else {
+                // Place della vite
+                if (!place_vite(pos_vite, q, Tf)) { // [s]
+                  std::cout << "Il robot non è riuscito a poggiare la vite sul "
+                               "banco \n";
+                  return -1;
+                }
+              }
+
+            }// width loop
+        } // angle loop
+    } // y loop
+  } // x loop
+
+  // Tornare con gripper ortogonale al piano
+
+  // Negative rotation along the y axis (base frame)
+  for (int angle_index = 0; angle_index < angles.size(); angle_index++) {
+
+
+    }
+
+
+  
+}
+
+} // namespace training
