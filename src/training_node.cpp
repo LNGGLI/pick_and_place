@@ -35,7 +35,7 @@
 
 using namespace training;
 
-TooN::Vector<3,double> High_center = TooN::makeVector(0.4 , 0.3 , 0.3);
+TooN::Vector<3,double> High_center = TooN::makeVector(0.5609167289621934, 0.3418667768627687 , 0.3);
 
 int main(int argc, char **argv) {
 
@@ -76,23 +76,15 @@ int main(int argc, char **argv) {
   set_goal_and_call_srv(pose_goal);
 
 
-  pose_goal.goal_position = High_center;
-  pose_goal.goal_quaternion = sun::UnitQuaternion( sun::roty(5*M_PI/180)* R_vite);
-  pose_goal.Tf = 3; // [s]
-  set_goal_and_call_srv(pose_goal);
+
+  // pose_goal.goal_position = High_center;
+  // pose_goal.goal_quaternion = sun::UnitQuaternion( R_vite * sun::roty(25*M_PI/180));
+  // pose_goal.Tf = 4; // [s]
+  // set_goal_and_call_srv(pose_goal);
 
 
-  pose_goal.goal_position = High_center;
-  pose_goal.goal_quaternion = sun::UnitQuaternion( sun::roty(10*M_PI/180)* R_vite);
-  pose_goal.Tf = 3; // [s]
-  set_goal_and_call_srv(pose_goal);
 
-  pose_goal.goal_position = High_center;
-  pose_goal.goal_quaternion = sun::UnitQuaternion( sun::roty(15*M_PI/180)* R_vite);
-  pose_goal.Tf = 3; // [s]
-  set_goal_and_call_srv(pose_goal);
-
-  // start_training();
+  start_training();
   
 
   
