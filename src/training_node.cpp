@@ -37,6 +37,16 @@ using namespace training;
 
 TooN::Vector<3,double> High_center = TooN::makeVector(0.5609167289621934, 0.3418667768627687 , 0.3);
 
+TooN::Matrix<3, 3, double> R_vite =
+    TooN::Data(0.9992015325089199, 0.01580575242573673, 0.0364314160708723,
+               0.016179945874301216, -0.9998094667944435, -0.00999941428324648,
+               0.036266426409821945, 0.01058088841616233, -0.9992861270112097);
+
+TooN::Vector<3, double> pos_vite = TooN::makeVector(
+    0.5609167289621934, 0.3418667768627687, 0.02566054272474297);
+
+
+
 int main(int argc, char **argv) {
 
   ros::init(argc, argv, "training_node");
@@ -83,8 +93,12 @@ int main(int argc, char **argv) {
   // set_goal_and_call_srv(pose_goal);
 
 
+  pose_goal.goal_position = pos_vite;
+  pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite);
+  pose_goal.Tf = 10.0;
+  set_goal_and_call_srv(pose_goal);
 
-  start_training();
+  build_dataset(pos_vite,R_vite);
   
 
   
