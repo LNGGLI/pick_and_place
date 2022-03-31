@@ -35,16 +35,25 @@
 
 using namespace training;
 
-TooN::Vector<3,double> High_center = TooN::makeVector(0.5609167289621934, 0.3418667768627687 , 0.3);
+TooN::Vector<3,double> High_center = TooN::makeVector( 0.556354395786367, 0.1498103594763436, 0.45);
 
-TooN::Matrix<3, 3, double> R_vite =
-    TooN::Data(0.9992015325089199, 0.01580575242573673, 0.0364314160708723,
-               0.016179945874301216, -0.9998094667944435, -0.00999941428324648,
-               0.036266426409821945, 0.01058088841616233, -0.9992861270112097);
+// TooN::Matrix<3, 3, double> R_vite =
+//     TooN::Data(0.9991047839074086, 0.017483794815692177, 0.03827169703363431,
+//                0.017294670557813363, -0.9998269342184016,0.005267202016599609,
+//                0.0383571641917851, -0.004600590340706399, -0.9992534882546481);
 
 TooN::Vector<3, double> pos_vite = TooN::makeVector(
-    0.5609167289621934, 0.3418667768627687, 0.02566054272474297);
+   0.556354395786367, 0.1498103594763436, 0.23915356455275982);
 
+
+TooN::Matrix<3, 3, double> R_vite =
+    TooN::Data(1.0, 0.0, 0.0,
+               0.0, -1.0,0.0,
+               0.0, 0.0, -1.0);
+
+
+
+ 
 
 
 int main(int argc, char **argv) {
@@ -78,6 +87,43 @@ int main(int argc, char **argv) {
   }
 
 
+/*******/
+  TooN::Vector<3,double> High_center = TooN::makeVector( 0.5535354143162453, 0.20198443739373792, 0.18016883666076441);
+  High_center[2] += 0.001;  
+  pose_goal.goal_position = High_center;
+  pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite);
+  pose_goal.Tf = 5; // [s]
+  set_goal_and_call_srv(pose_goal);
+
+  char a;
+  std::cout << "Press a key...";
+  std::cin >> a;
+
+  pose_goal.goal_position = High_center;
+  pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite*sun::roty(30.0*M_PI/180.0));
+  pose_goal.Tf = 5; // [s]
+  set_goal_and_call_srv(pose_goal);
+
+  std::cout << "Press a key...";
+  std::cin >> a;
+
+  pose_goal.goal_position = High_center;
+  pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite*sun::roty(-30.0*M_PI/180.0));
+  pose_goal.Tf = 10; // [s]
+  set_goal_and_call_srv(pose_goal);
+
+  std::cout << "Press a key...";
+  std::cin >> a;
+
+  pose_goal.goal_position = High_center;
+  pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite);
+  pose_goal.Tf = 5; // [s]
+  set_goal_and_call_srv(pose_goal);
+
+
+  return 0;
+/*******/
+
 
   // Movimento del robot in alto al centro
   pose_goal.goal_position = High_center;
@@ -87,19 +133,21 @@ int main(int argc, char **argv) {
 
 
 
-  // pose_goal.goal_position = High_center;
-  // pose_goal.goal_quaternion = sun::UnitQuaternion( R_vite * sun::roty(25*M_PI/180));
-  // pose_goal.Tf = 4; // [s]
-  // set_goal_and_call_srv(pose_goal);
-
-
   pose_goal.goal_position = pos_vite;
   pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite);
-  pose_goal.Tf = 10.0;
+  pose_goal.Tf = 5.0;
   set_goal_and_call_srv(pose_goal);
 
-  build_dataset(pos_vite,R_vite);
+
+  // build_dataset(pos_vite,R_vite);
   
+
+  press_y_gripper();
+  gripper_move(0.04,0.01);
+  pose_goal.goal_position = pos_vite - R_vite*TooN::makeVector(0.0, 0.0, 0.006 );
+  pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite * sun::roty( 25.0 * M_PI / 180)  );
+  pose_goal.Tf = 5.0;
+  set_goal_and_call_srv(pose_goal);
 
   
 

@@ -20,11 +20,13 @@
     </description>
     </class>
 
-    <class name="controllers/PickAndPlaceController" type="controllers::PickAndPlaceController" base_class_type="controller_interface::ControllerBase">
+    <class name="JointController/JointController" type="JointController::JointController" base_class_type="controller_interface::ControllerBase">
       <description>
           Controller che segue una traiettoria in spazio giunti.
       </description>
-      </class>
+    </class>
+  
+
   
 </library>
 

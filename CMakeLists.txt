@@ -172,7 +172,7 @@ add_library(controllers
 src/Controllers/cartesian_torque_controller.cpp
 src/Controllers/cartesian_impedance_controller.cpp
 src/Controllers/pick_and_place_controller.cpp
-
+src/Controllers/joint_controller.cpp
 
 )
 
@@ -183,7 +183,7 @@ src/Panda.cpp)
 target_link_libraries(controllers 
  ${catkin_LIBRARIES} 
  ${Franka_LIBRARIES}
- )
+)
 
 
 target_include_directories(controllers SYSTEM PUBLIC

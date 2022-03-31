@@ -169,11 +169,12 @@ void stateCB(const franka_msgs::FrankaState::ConstPtr &msg) {
       R(i, j) = R_array[i + j * 3];
 
   sun::UnitQuaternion current_quat(R);
-
+  
   // Calcolo errore
   double delta_p = TooN::norm(desired_pos - pose_goal.goal_position);
   double delta_q_norm =
       TooN::norm((pose_goal.goal_quaternion * inv(current_quat)).getV());
+  
   TooN::Vector<7, double> vel;
   for (int i = 0; i < 7; i++) {
     vel[i] = msg->dq[i];
@@ -299,6 +300,7 @@ bool pick_vite(const TooN::Vector<3, double> &pos, const sun::UnitQuaternion &q,
 
   set_goal_and_call_srv(pose_goal);
 
+ 
   // Grasp action del gripper lato filettato
 
   double grasp_width = width; // 0.006[m]
@@ -353,13 +355,13 @@ void tactile_mean(double* tactile_mean){
 /**
  * @brief 
  * 
- * The algorithm will create two different files with the sampled data:
- * - screw's contact point with the tactile (x,y in tactile frame).   
- * - screw's angle in pad (angle of rotation around z axis in tactile frame).  
+ * The algorithm will create 2 different files with the following data:
+ * - screw's contact point with the tactile's pad (x,y in tactile frame).   
+ * - screw's orientation in tactile frame (angle of rotation around z axis in tactile frame).  
  * - grasping width.   
  * - 25 voltage values measured by the tactile.  
  * 
- * One file will have positive angle values and the other negative angle values. 
+ * One file will contain positive angle values and the other negative angle values. 
  * 
  * Conditions that have to be met for the build_dataset function to work:
  * R_vite:
@@ -383,12 +385,12 @@ bool build_dataset(const TooN::Vector<3,double>& pos_vite, const TooN::Matrix<3,
   // These structures are the same for both datasets
   const TooN::Vector<11, double> delta_x =
       TooN::makeVector(-0.005, -0.004, -0.003, -0.002, -0.001, 0.0, 0.001,0.002, 0.003, 0.004, 0.005);
-  const TooN::Vector<8, double> delta_y =
-      TooN::makeVector(0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008);
+  const TooN::Vector<7, double> delta_y =
+      TooN::makeVector(0.0, 0.001, 0.002, 0.003, 0.004, 0.005, 0.006);
 
   // Rotations will be performed around the y axis of the current frame    
-  const TooN::Vector<8, double> angles =
-      TooN::makeVector(0.0, 0.0, 5.0, 10.0, 15.0, 20.0, 20.0, 25.0);
+  const TooN::Vector<7, double> angles =
+      TooN::makeVector(0.0, 5.0, 10.0, 15.0, 20.0, 20.0, 25.0);
   const double width = 0.007;
   sun::UnitQuaternion desired_quat;
   TooN::Vector<3, double> desired_pos = pos_vite;
@@ -404,106 +406,105 @@ bool build_dataset(const TooN::Vector<3,double>& pos_vite, const TooN::Matrix<3,
 
   // Begin training loop
 
-  // Positive rotation along the y axis (current frame)
-  // for (int y_index = 0; y_index < delta_y.size() && ros::ok(); y_index++) {
+  // Negative rotation along the y axis (current frame)
+  for (int y_index = 6; y_index < delta_y.size() && ros::ok(); y_index++) {
     
-  //   std::cout << "**Sampling with y = " << delta_y[y_index] << "**\n\n";
-  //   double previous_angle = -1.0;
-  //   double current_angle;
+    std::cout << "**Sampling with y = " << delta_y[y_index] << "**\n\n";
+    double previous_angle = -1.0;
+    double current_angle;
 
-  //   pose_goal.goal_position = pos_vite + TooN::makeVector(0.0 , 0.0, delta_y[y_index]);
-  //   pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite);
-  //   pose_goal.Tf = 5.0;
-  //   set_goal_and_call_srv(pose_goal);
+    pose_goal.goal_position = pos_vite - R_vite * TooN::makeVector(0.0 , 0.0, delta_y[y_index]);
+    pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite);
+    pose_goal.Tf = 5.0;
+    set_goal_and_call_srv(pose_goal);
 
-  //   for (int angle_index = 0; angle_index <= y_index && ros::ok(); angle_index++) {
+    for (int angle_index = 6; angle_index <= y_index && ros::ok(); angle_index++) {
 
-  //     ;
-  //     // Since certain angles appear twice in the angles vector you need to skip
-  //     // the iteration if you have already completed the sampling at the current angle.
+      // Since certain angles appear twice in the angles vector you need to skip
+      // the iteration if you have already completed the sampling at the current angle.
 
-  //     current_angle = angles[angle_index];
-  //     if (previous_angle == current_angle) 
-  //       continue;
-  //       std::cout << "Sampling angle = " << angles[angle_index] << "\n" 
-  //     previous_angle = current_angle;
+      current_angle = angles[angle_index];
+      if (previous_angle == current_angle) 
+        continue;
+        std::cout << "Sampling angle = " << angles[angle_index] << "\n";
+      previous_angle = current_angle;
 
-  //     // If initial conditions are met: positive rotation about y axis of the current
-  //     // frame are negative rotation around the z axis of the tactile frame.
-  //     TooN::Matrix<3, 3, double> O_R_EE =
-  //         R_vite * sun::roty(-current_angle * M_PI / 180); // Be careful to the "-" sign next to current_angle
+      // If initial conditions are met: negative rotation about y axis of the current
+      // frame are positive rotation around the z axis of the tactile frame.
+      TooN::Matrix<3, 3, double> O_R_EE =
+          R_vite * sun::roty(-current_angle * M_PI / 180); // Be careful to the "-" sign next to current_angle
 
-  //     for (int x_index = 0; x_index < delta_x.size() && ros::ok(); x_index++) {
+      for (int x_index = 0; x_index < delta_x.size() && ros::ok(); x_index++) {
 
-  //       for (int width_index = 0; width_index <= move_width_samples && ros::ok(); width_index++) {
+        for (int width_index = 0; width_index <= move_width_samples && ros::ok(); width_index++) {
           
-  //         current_width = width - width_index * 0.001;
+          current_width = width - width_index * 0.001;
 
-  //         if (width_index == 0) {
+          if (width_index == 0) {
+
+            // In order to obtain the desired y at contact it is easier to move in EE frame.
+            desired_pos =
+                pos_vite - R_vite * TooN::makeVector(0.0, 0.0, delta_y[y_index])
+                  + O_R_EE * TooN::makeVector(delta_x[x_index], 0.0, 0.0);
+
+            desired_quat = sun::UnitQuaternion(O_R_EE);
+
+            // if x_index == 0 the robot may needs to execute a rotation so it needs more time
+            rotation_time = x_index == 0 ? 5.0 : 0.5;
             
-  //           // In order to obtain the desired y at contact it is easier to move in EE frame.
-  //           desired_pos =
-  //               pos_vite + TooN::makeVector(0.0, 0.0, delta_y[y_index]) +
-  //               O_R_EE * TooN::Vector<3, double>({delta_x[x_index], 0.0, 0.0});
+            // Pick the screw
+            if (!pick_vite(desired_pos, desired_quat, rotation_time, current_width)) {
+              std::cout << "Robot could not grasp the screw \n";
+              return -1;
+            }
 
-  //           desired_quat = sun::UnitQuaternion(O_R_EE);
+            // Move up the EE
+            pose_goal.goal_position = desired_pos - R_vite * TooN::makeVector(0.0, 0.0, 0.004);
+            pose_goal.goal_quaternion = desired_quat;
+            pose_goal.Tf = 0.5; // [s]
+            set_goal_and_call_srv(pose_goal);
 
-  //           // if x_index == 0 the robot may needs to execute a rotation so it needs more time
-  //           rotation_time = x_index == 0 ? 5.0 : 0.5;
+            // Read sensor and compute mean
+            tactile_mean(tactile_mean_data);
+
+            // Write to file
+            dataset_positive << -delta_x[x_index] << " " << delta_y[y_index] << " "
+                    << current_angle << " " << current_width << " ";
+            for (int i = 0; i < 25; i++)
+              dataset_positive << tactile_mean_data[i] << " ";
+
+            dataset_positive << "\n";
+          } else if (width_index < move_width_samples) {
             
-  //           // Pick the screw
-  //           if (!pick_vite(desired_pos, desired_quat, rotation_time, current_width)) {
-  //             std::cout << "Robot could not grasp the screw \n";
-  //             return -1;
-  //           }
+            // If the screw has already been grasped you can grasp with a
+            // different width without placing the screw down
+            gripper_grasp(current_width, 0.03); // [m] , [m/s]
+            tactile_mean(tactile_mean_data);
 
-  //           // Move up the EE
-  //           pose_goal.goal_position = desired_pos + TooN::makeVector(0.0, 0.0, 0.004);
-  //           pose_goal.goal_quaternion = desired_quat;
-  //           pose_goal.Tf = 0.5; // [s]
-  //           set_goal_and_call_srv(pose_goal);
+            // Write to file
+            dataset_positive << -delta_x[x_index] << " " << delta_y[y_index] << " "
+                    << current_angle << " " << current_width << " ";
+            for (int i = 0; i < 25; i++)
+              dataset_positive << tactile_mean_data[i] << " ";
 
-  //           // Read sensor and compute mean
-  //           tactile_mean(tactile_mean_data);
+            dataset_positive << "\n";
 
-  //           // Write to file
-  //           dataset_positive << -delta_x[x_index] << " " << delta_y[y_index] << " "
-  //                   << current_angle << " " << current_width << " ";
-  //           for (int i = 0; i < 25; i++)
-  //             dataset_positive << tactile_mean_data[i] << " ";
+          }
 
-  //           dataset_positive << "\n";
-  //         } else if (width_index < move_width_samples) {
-            
-  //           // If the screw has already been grasped you can grasp with a
-  //           // different width without placing the screw down
-  //           gripper_grasp(current_width, 0.03); // [m] , [m/s]
-  //           tactile_mean(tactile_mean_data);
+          else {
 
-  //           // Write to file
-  //           dataset_positive << -delta_x[x_index] << " " << delta_y[y_index] << " "
-  //                   << current_angle << " " << current_width << " ";
-  //           for (int i = 0; i < 25; i++)
-  //             dataset_positive << tactile_mean_data[i] << " ";
+            // If you get to the last width index you need to place the screw down
+            gripper_move(0.03, 0.04); // (Let the screw drop)
 
-  //           dataset_positive << "\n";
+          }
 
-  //         }
+        } // width loop
 
-  //         else {
+      } // x loop
 
-  //           // If you get to the last width index you need to place the screw down
-  //           gripper_move(0.03, 0.04); // (Let the screw drop)
+    } // angle loop
 
-  //         }
-
-  //       } // width loop
-
-  //     } // x loop
-
-  //   } // angle loop
-
-  // } // y loop
+  } // y loop
 
   //  First iteration
   //             delta_x = - 0.005 , delta_y = + 0.001 , current_angle = +
@@ -563,13 +564,13 @@ bool build_dataset(const TooN::Vector<3,double>& pos_vite, const TooN::Matrix<3,
             
             // In order to obtain the desired y at contact it is easier to move in EE frame.
             desired_pos =
-                pos_vite + TooN::makeVector(0.0, 0.0, delta_y[y_index]) +
+                pos_vite - R_vite * TooN::makeVector(0.0, 0.0, delta_y[y_index]) +
                 O_R_EE * TooN::Vector<3, double>({delta_x[x_index], 0.0, 0.0});
 
             desired_quat = sun::UnitQuaternion(O_R_EE);
 
             // if x_index == 0 the robot may needs to execute a rotation so it needs more time
-            rotation_time = x_index == 0 ? 4.0 : 0.5;
+            rotation_time = x_index == 0 ? 5.0 : 0.5;
             
             // Pick the screw
             if (!pick_vite(desired_pos, desired_quat, rotation_time, current_width)) {
@@ -578,7 +579,7 @@ bool build_dataset(const TooN::Vector<3,double>& pos_vite, const TooN::Matrix<3,
             }
 
             // Move up the EE
-            pose_goal.goal_position = desired_pos + TooN::makeVector(0.0, 0.0, 0.004);
+            pose_goal.goal_position = desired_pos - R_vite * TooN::makeVector(0.0, 0.0, 0.004);
             pose_goal.goal_quaternion = desired_quat;
             pose_goal.Tf = 0.5; // [s]
             set_goal_and_call_srv(pose_goal);
