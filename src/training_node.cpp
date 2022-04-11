@@ -73,14 +73,14 @@ int main(int argc, char **argv) {
       "/force_indicator_F110", 1, forceCB);
 
   // Check e set realtime node
-  if (!check_realtime())
-    throw std::runtime_error("REALTIME NOT AVAILABLE");
+  // if (!check_realtime())
+  //   throw std::runtime_error("REALTIME NOT AVAILABLE");
 
-  if (!set_realtime_SCHED_FIFO())
-    throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
+  // if (!set_realtime_SCHED_FIFO())
+  //   throw std::runtime_error("ERROR IN set_realtime_SCHED_FIFO");
 
   // Accensione del controller
-  if (!switch_controller("pick_and_place_controller", "")) {
+  if (!switch_controller("joint_controller", "")) {
     std::cout << "Lo switch del controller non è andato a buon fine!"
               << std::endl;
     return -1;
@@ -88,41 +88,12 @@ int main(int argc, char **argv) {
 
 
 /*******/
-  TooN::Vector<3,double> High_center = TooN::makeVector( 0.5535354143162453, 0.20198443739373792, 0.18016883666076441);
-  High_center[2] += 0.001;  
-  pose_goal.goal_position = High_center;
-  pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite);
-  pose_goal.Tf = 5; // [s]
-  set_goal_and_call_srv(pose_goal);
-
-  char a;
-  std::cout << "Press a key...";
-  std::cin >> a;
-
+  TooN::Vector<3,double> High_center = TooN::makeVector( 0.5, 0.2 , 0.3);
+  High_center[2] += 0.04;  
   pose_goal.goal_position = High_center;
   pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite*sun::roty(30.0*M_PI/180.0));
-  pose_goal.Tf = 5; // [s]
+  pose_goal.Tf = 15; // [s]
   set_goal_and_call_srv(pose_goal);
-
-  std::cout << "Press a key...";
-  std::cin >> a;
-
-  pose_goal.goal_position = High_center;
-  pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite*sun::roty(-30.0*M_PI/180.0));
-  pose_goal.Tf = 10; // [s]
-  set_goal_and_call_srv(pose_goal);
-
-  std::cout << "Press a key...";
-  std::cin >> a;
-
-  pose_goal.goal_position = High_center;
-  pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite);
-  pose_goal.Tf = 5; // [s]
-  set_goal_and_call_srv(pose_goal);
-
-
-  return 0;
-/*******/
 
 
   // Movimento del robot in alto al centro

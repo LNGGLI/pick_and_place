@@ -16,7 +16,6 @@
 #include <ros/time.h>
 #include <Eigen/Dense>
 
-
 #include <realtime_tools/realtime_buffer.h>
 
 #include <franka_hw/franka_cartesian_command_interface.h>

@@ -3,6 +3,7 @@
 #pragma once
 
 #include <pick_and_place/SetTraj.h>
+#include <pick_and_place/Panda.h>
 
 #include <array>
 #include <string>
@@ -24,20 +25,42 @@
 #include <sun_traj_lib/Rotation_Const_Axis_Traj.h>
 
 namespace JointController {
+  
+  // Oggetto panda
+  sun::Panda panda(TooN::makeVector(1.0,1.0,1.0,1.0).as_diagonal(),1.0,"panda");
 
   // Variabili per la traiettoria
-  std::array<double, 16> current_pose_{};
-  std::array<double,7> current_configuration_{};
+  TooN::Matrix<4, 4, double> current_pose_;
+  std::array<double,7> initial_configuration_;
 
   sun::Cartesian_Independent_Traj* cartesian_traj_;
   
   // Variabili ROS
-  ros::Publisher command_pb_;
   ros::ServiceServer server_set_traj_;
+  ros::Publisher pub_command_;
 
   // Variabili di controllo
   bool start = false;
   ros::Duration elapsed_time_;
+
+  // Variabili del CLIK
+  double Ts = 0.001;  // periodo s
+  double fs = 1 / Ts; // frequenza Hz
+  double gain = 0.5 * fs;
+  TooN::Vector<> qdot = TooN::Zeros(7); // velocità di giunto ritorno
+  TooN::Vector<6, int> mask = 
+      TooN::Ones; // maschera, se l'i-esimo elemento è zero allora l'i-esima
+                  // componente cartesiana non verrà usata per il calcolo
+                  // dell'errore
+  TooN::Vector<3> xd = TooN::Zeros; // velocità in translazione desiderata
+  TooN::Vector<3> w = TooN::Zeros;  // velocità angolare desiderata
+  TooN::Vector<6> error = TooN::Ones; // questo va "resettato" ogni volta prima del clik
+  TooN::Vector<7> qDH_k;
+  sun::UnitQuaternion oldQ;
+
+  sun::UnitQuaternion unit_quat_d_;
+  TooN::Vector<3, double> posizione_d_;
+
 
   // Handler per il controller
   hardware_interface::PositionJointInterface* position_joint_interface_;

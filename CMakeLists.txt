@@ -180,7 +180,8 @@ src/Controllers/joint_controller.cpp
 add_library(panda 
 src/Panda.cpp)
 
-target_link_libraries(controllers 
+target_link_libraries(controllers
+ panda
  ${catkin_LIBRARIES} 
  ${Franka_LIBRARIES}
 )
@@ -225,12 +226,12 @@ add_executable(training_node src/training_node.cpp)
 #   ${catkin_LIBRARIES}
 # )
 
- target_link_libraries(trajectory_node
+target_link_libraries(trajectory_node
   ${catkin_LIBRARIES}
   panda
  )
 
- target_link_libraries(calibration_node
+target_link_libraries(calibration_node
  ${catkin_LIBRARIES}
  
 )
