@@ -35,8 +35,6 @@
 
 using namespace training;
 
-TooN::Vector<3,double> High_center = TooN::makeVector( 0.556354395786367, 0.1498103594763436, 0.45);
-
 // TooN::Matrix<3, 3, double> R_vite =
 //     TooN::Data(0.9991047839074086, 0.017483794815692177, 0.03827169703363431,
 //                0.017294670557813363, -0.9998269342184016,0.005267202016599609,
@@ -86,10 +84,9 @@ int main(int argc, char **argv) {
     return -1;
   }
 
+  
 
-/*******/
-  TooN::Vector<3,double> High_center = TooN::makeVector( 0.5, 0.2 , 0.3);
-  High_center[2] += 0.04;  
+  TooN::Vector<3,double> High_center = TooN::makeVector( 0.5, 0.2 , 0.3);  
   pose_goal.goal_position = High_center;
   pose_goal.goal_quaternion = sun::UnitQuaternion(R_vite*sun::roty(30.0*M_PI/180.0));
   pose_goal.Tf = 15; // [s]
@@ -110,9 +107,6 @@ int main(int argc, char **argv) {
   set_goal_and_call_srv(pose_goal);
 
 
-  // build_dataset(pos_vite,R_vite);
-  
-
   press_y_gripper();
   gripper_move(0.04,0.01);
   pose_goal.goal_position = pos_vite - R_vite*TooN::makeVector(0.0, 0.0, 0.006 );
@@ -121,6 +115,9 @@ int main(int argc, char **argv) {
   set_goal_and_call_srv(pose_goal);
 
   
+
+
+  // build_dataset(pos_vite,R_vite);
 
   return 0;
 }

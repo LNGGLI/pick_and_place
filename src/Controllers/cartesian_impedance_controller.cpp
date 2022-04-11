@@ -124,6 +124,7 @@ namespace controllers
   {
     // compute initial velocity with jacobian and set x_attractor and q_d_nullspace
     // to initial configuration
+    
     franka::RobotState initial_state = state_handle_->getRobotState();
     // get jacobian
     std::array<double, 42> jacobian_array =

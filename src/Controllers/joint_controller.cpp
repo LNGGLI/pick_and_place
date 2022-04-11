@@ -21,17 +21,6 @@ namespace JointController {
 // Semaforo
   std::mutex traj_mutex;
 
-void set_command(const std::array<double,7>& joint_configuration){
-  for(int i = 0; i < 7; i++){
-    position_joint_handles_[i].setCommand(joint_configuration[i]);
-  }
-}
-
-void set_command(const TooN::Vector<7,double>& joint_configuration){
-  for(int i = 0; i < 7; i++){
-    position_joint_handles_[i].setCommand(joint_configuration[i]);
-  }
-}
 
 bool set_traj(pick_and_place::SetTraj::Request &req,
               pick_and_place::SetTraj::Response &resp) {
@@ -172,19 +161,26 @@ void JointController::starting(const ros::Time& /* time */) {
 
 }
 
+ros::Time previous_time;
 
-void JointController::update(const ros::Time& /*time*/,
+void JointController::update(const ros::Time& time,
                                             const ros::Duration& period) {
 
   if (!start || !traj_mutex.try_lock()) 
-  { 
+  {
     // Il controller è avviato ma non è stata ancora assegnata
     // nessuna posa desiderata. Oppure è in corso la creazione della
     // traiettoria.
-    set_command(initial_configuration_);
+    previous_time = ros::Time::now();
+    for (int i = 0; i < 7; i++) {
+      position_joint_handles_[i].setCommand(initial_configuration_[i]);
+    }
   } 
   else 
   {
+
+    ROS_INFO("previous_time: %f \n, time_now: %f\n time: %f \n", previous_time.toSec(),ros::Time::now().toSec(),time.toSec());
+    ROS_INFO("Diff time - previous_time = %f", time.toSec()-previous_time.toSec());
     elapsed_time_ += period;
 
     posizione_d_ = cartesian_traj_->getPosition(elapsed_time_.toSec());
@@ -192,31 +188,31 @@ void JointController::update(const ros::Time& /*time*/,
     xd = cartesian_traj_->getLinearVelocity(elapsed_time_.toSec());
     w = cartesian_traj_->getAngularVelocity(elapsed_time_.toSec());
 
-    // qDH_k = panda.clik(
-    //     qDH_k,       //<- qDH attuale
-    //     posizione_d_, // <- posizione desiderata
-    //     unit_quat_d_, // <- quaternione desiderato
-    //     oldQ,        // <- quaternione al passo precedente (per garantire la
-    //                  // continuità)
-    //     xd,          // <- velocità in translazione desiderata
-    //     w,           //<- velocità angolare desiderata
-    //     mask, // <- maschera, se l'i-esimo elemento è zero allora l'i-esima
-    //           // componente cartesiana non verrà usata per il calcolo
-    //           // dell'errore
-    //     gain, // <- guadagno del clik
-    //     period.toSec(),   // <- Ts, tempo di campionamento
-    //     0.0,  // <- quadagno obj secondario
-    //     TooN::Zeros(panda.getNumJoints()), // <- velocity to be projected into the null space
+    qDH_k = panda.clik(
+        qDH_k,       //<- qDH attuale
+        posizione_d_, // <- posizione desiderata
+        unit_quat_d_, // <- quaternione desiderato
+        oldQ,        // <- quaternione al passo precedente (per garantire la
+                     // continuità)
+        xd,          // <- velocità in translazione desiderata
+        w,           //<- velocità angolare desiderata
+        mask, // <- maschera, se l'i-esimo elemento è zero allora l'i-esima
+              // componente cartesiana non verrà usata per il calcolo
+              // dell'errore
+        gain, // <- guadagno del clik
+        period.toSec(),   // <- Ts, tempo di campionamento
+        0.0,  // <- quadagno obj secondario
+        TooN::Zeros(panda.getNumJoints()), // <- velocity to be projected into the null space
 
-    //     // Return Vars
-    //     qdot,  // <- variabile di ritorno velocità di giunto
-    //     error, //<- variabile di ritorno errore
-    //     oldQ // <- variabile di ritorno: Quaternione attuale (N.B. qui uso oldQ
-    //          // in modo da aggiornare direttamente la variabile oldQ e averla
-    //          // già pronta per la prossima iterazione)
-    // );
+        // Return Vars
+        qdot,  // <- variabile di ritorno velocità di giunto
+        error, //<- variabile di ritorno errore
+        oldQ // <- variabile di ritorno: Quaternione attuale (N.B. qui uso oldQ
+             // in modo da aggiornare direttamente la variabile oldQ e averla
+             // già pronta per la prossima iterazione)
+    );
 
-    sensor_msgs::JointState msg; 
+    sensor_msgs::JointState msg;
     msg.name.resize(7);
     msg.header.stamp = ros::Time::now();
     msg.name = {"j1","j2","j3","j4","j5","j6","j7"};
@@ -227,7 +223,9 @@ void JointController::update(const ros::Time& /*time*/,
 
     //if(!panda.exceededHardJointLimits(panda.joints_DH2Robot(qDH_k)))
 
-    set_command(initial_configuration_);
+    for (int i = 0; i < 7; i++) {
+      position_joint_handles_[i].setCommand(initial_configuration_[i]);
+    }
 
     // std::array<double, 16> pose = state_handle_->getRobotState().O_T_EE;
     // current_pose_ =
@@ -235,12 +233,11 @@ void JointController::update(const ros::Time& /*time*/,
     //                pose[9], pose[13], pose[2], pose[6], pose[10], pose[14],
     //                pose[3], pose[7], pose[11], pose[15]);
 
+    previous_time = time;
+
     traj_mutex.unlock();
 
   
-
-
-
   }
 }
   
